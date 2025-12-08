@@ -21,7 +21,6 @@ namespace PreClear.Api.Controllers
         {
             return await _db.Users.AsNoTracking().ToListAsync();
         }
-
         // GET: api/users/{id}
         [HttpGet("{id:long}")]
         public async Task<ActionResult<User>> Get(long id)
@@ -30,7 +29,6 @@ namespace PreClear.Api.Controllers
             if (user == null) return NotFound();
             return user;
         }
-
         // POST: api/users
         [HttpPost]
         public async Task<ActionResult<User>> Create(User input)
@@ -41,7 +39,6 @@ namespace PreClear.Api.Controllers
             await _db.SaveChangesAsync();
             return CreatedAtAction(nameof(Get), new { id = input.Id }, input);
         }
-
         // PUT: api/users/{id}
         [HttpPut("{id:long}")]
         public async Task<IActionResult> Update(long id, User input)
@@ -59,7 +56,6 @@ namespace PreClear.Api.Controllers
             await _db.SaveChangesAsync();
             return NoContent();
         }
-
         // DELETE: api/users/{id}
         [HttpDelete("{id:long}")]
         public async Task<IActionResult> Delete(long id)

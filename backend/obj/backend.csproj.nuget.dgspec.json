@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "E:\\Pre-Clear\\Pre-Clear\\backend\\backend.csproj": {}
+    "C:\\Users\\devis\\Pre-Clear\\backend\\backend.csproj": {}
   },
   "projects": {
-    "E:\\Pre-Clear\\Pre-Clear\\backend\\backend.csproj": {
+    "C:\\Users\\devis\\Pre-Clear\\backend\\backend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\Pre-Clear\\Pre-Clear\\backend\\backend.csproj",
+        "projectUniqueName": "C:\\Users\\devis\\Pre-Clear\\backend\\backend.csproj",
         "projectName": "backend",
-        "projectPath": "E:\\Pre-Clear\\Pre-Clear\\backend\\backend.csproj",
-        "packagesPath": "C:\\Users\\Asus-2025\\.nuget\\packages\\",
-        "outputPath": "E:\\Pre-Clear\\Pre-Clear\\backend\\obj\\",
+        "projectPath": "C:\\Users\\devis\\Pre-Clear\\backend\\backend.csproj",
+        "packagesPath": "C:\\Users\\devis\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\devis\\Pre-Clear\\backend\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\Asus-2025\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\devis\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
@@ -37,8 +37,7 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        },
-        "SdkAnalysisLevel": "10.0.100"
+        }
       },
       "frameworks": {
         "net8.0": {
@@ -77,6 +76,10 @@
             "Swashbuckle.AspNetCore": {
               "target": "Package",
               "version": "[6.6.2, )"
+            },
+            "System.IdentityModel.Tokens.Jwt": {
+              "target": "Package",
+              "version": "[6.39.0, )"
             }
           },
           "imports": [
@@ -98,7 +101,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.100/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.416/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

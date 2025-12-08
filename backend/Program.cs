@@ -8,6 +8,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// application services
+builder.Services.AddScoped<PreClear.Api.Interfaces.IAuthService, PreClear.Api.Services.AuthService>();
+
 // Connection
 var conn = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(conn))
@@ -19,6 +22,20 @@ builder.Services.AddDbContext<PreclearDbContext>(options =>
         mySqlOptions => mySqlOptions.EnableRetryOnFailure()
     )
 );
+
+// Log which connection string is being used (mask password) to help troubleshooting
+var effectiveConn = builder.Configuration.GetConnectionString("DefaultConnection");
+if (!string.IsNullOrWhiteSpace(effectiveConn))
+{
+    try
+    {
+        // mask password value for logging
+        var masked = System.Text.RegularExpressions.Regex.Replace(effectiveConn, "(Password=)([^;]+)", "$1****", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        builder.Logging.AddConsole();
+        Console.WriteLine($"Using DB connection: {masked}");
+    }
+    catch { }
+}
 
 // CORS (dev)
 builder.Services.AddCors(p => p.AddDefaultPolicy(q => q.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
@@ -42,6 +59,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseDeveloperExceptionPage();
 }
 
 app.UseHttpsRedirection();
