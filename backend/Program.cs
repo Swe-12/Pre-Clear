@@ -1,15 +1,27 @@
 using Microsoft.EntityFrameworkCore;
 using PreClear.Api.Data;
+using PreClear.Api.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new() { Title = "PreClear API", Version = "v1" });
+    c.OperationFilter<FileUploadOperationFilter>();
+});
 
 // application services
 builder.Services.AddScoped<PreClear.Api.Interfaces.IAuthService, PreClear.Api.Services.AuthService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IChatService, PreClear.Api.Services.ChatService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IAiService, PreClear.Api.Services.AiService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IAiRepository, PreClear.Api.Repositories.AiRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IShipmentRepository, PreClear.Api.Repositories.ShipmentRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IShipmentService, PreClear.Api.Services.ShipmentService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IDocumentRepository, PreClear.Api.Repositories.DocumentRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IDocumentService, PreClear.Api.Services.DocumentService>();
 
 // Connection
 var conn = builder.Configuration.GetConnectionString("DefaultConnection");
