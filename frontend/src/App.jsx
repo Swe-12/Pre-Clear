@@ -30,7 +30,6 @@ import { DocumentReview } from "./components/broker/DocumentReview";
 import { RequestDocuments } from "./components/broker/RequestDocuments";
 import { BrokerChat } from "./components/broker/BrokerChat";
 import { BrokerProfile } from "./components/broker/BrokerProfile";
-import { ApprovedShipments } from "./components/broker/ApprovedShipments";
 import ApprovedShipviewpg from "./components/broker/ApprovedShipviewpg";
 
 // Admin Pages
