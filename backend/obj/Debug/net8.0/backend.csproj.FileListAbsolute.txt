@@ -248,3 +248,8 @@ C:\Users\devis\Pre-Clear\backend\obj\Debug\net8.0\refint\backend.dll
 C:\Users\devis\Pre-Clear\backend\obj\Debug\net8.0\backend.pdb
 C:\Users\devis\Pre-Clear\backend\obj\Debug\net8.0\backend.genruntimeconfig.cache
 C:\Users\devis\Pre-Clear\backend\obj\Debug\net8.0\ref\backend.dll
+E:\Pre-Clear\pre-clear\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Abstractions.dll
+E:\Pre-Clear\pre-clear\backend\bin\Debug\net8.0\Microsoft.IdentityModel.JsonWebTokens.dll
+E:\Pre-Clear\pre-clear\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Logging.dll
+E:\Pre-Clear\pre-clear\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Tokens.dll
+E:\Pre-Clear\pre-clear\backend\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll
