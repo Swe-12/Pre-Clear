@@ -11,6 +11,7 @@ namespace PreClear.Api.Models
         public string? HsCode { get; set; }
         public decimal Quantity { get; set; } = 1;
         public string Unit { get; set; } = "pcs";
+        public decimal? Weight { get; set; }
         public decimal? UnitPrice { get; set; }
         public decimal? TotalValue { get; set; }
         public string? CountryOfOrigin { get; set; }

@@ -11,7 +11,7 @@ using PreClear.Api.Models;
 namespace PreClear.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/docs")]
     public class DocumentsController : ControllerBase
     {
         private readonly IDocumentService _service;
@@ -23,7 +23,7 @@ namespace PreClear.Api.Controllers
             _logger = logger;
         }
 
-        [HttpPost("shipments/{shipmentId}/upload")]
+        [HttpPost("upload/{shipmentId:long}")]
         [RequestSizeLimit(50_000_000)]
         public async Task<IActionResult> Upload(long shipmentId, [FromForm] Models.FileUploadRequest request, [FromForm] DocumentType docType = DocumentType.Other, [FromForm] long? uploadedBy = null)
         {
@@ -34,7 +34,7 @@ namespace PreClear.Api.Controllers
             {
                 using var stream = file.OpenReadStream();
                 var created = await _service.UploadAsync(shipmentId, uploadedBy, file.FileName, stream, docType);
-                return Created(created.FileUrl ?? $"/api/documents/{created.Id}/download", created);
+                return Created(created.FileUrl ?? $"/api/docs/{created.Id}/download", created);
             }
             catch (ArgumentException aex)
             {
@@ -48,7 +48,7 @@ namespace PreClear.Api.Controllers
             }
         }
 
-        [HttpGet("shipments/{shipmentId}/documents")]
+        [HttpGet("{shipmentId:long}")]
         public async Task<IActionResult> ListByShipment(long shipmentId)
         {
             try
@@ -59,6 +59,22 @@ namespace PreClear.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error listing documents for shipment {ShipmentId}", shipmentId);
+                return StatusCode(500, new { error = "internal_error" });
+            }
+        }
+
+        [HttpDelete("{docId:long}")]
+        public async Task<IActionResult> Delete(long docId)
+        {
+            try
+            {
+                var ok = await _service.DeleteAsync(docId);
+                if (!ok) return NotFound(new { error = "document_not_found" });
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting document {DocId}", docId);
                 return StatusCode(500, new { error = "internal_error" });
             }
         }

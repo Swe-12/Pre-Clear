@@ -58,7 +58,9 @@ namespace PreClear.Api.Services
             {
                 ShipmentId = shipmentId,
                 DocumentType = docType,
+                FileName = originalFileName,
                 FileUrl = unique, // will be resolved by controller to a download route
+                FileType = ext,
                 UploadedBy = uploadedBy,
                 UploadedAt = DateTime.UtcNow,
                 Version = 1
@@ -95,6 +97,32 @@ namespace PreClear.Api.Services
 
             if (candidate != null && File.Exists(candidate)) return (doc, candidate);
             return (doc, null);
+        }
+
+        public async Task<bool> DeleteAsync(long docId)
+        {
+            var doc = await _repo.FindAsync(docId);
+            if (doc == null) return false;
+
+            try
+            {
+                // delete physical file if it exists
+                if (!string.IsNullOrWhiteSpace(doc.FileUrl))
+                {
+                    var filePath = Path.Combine(_uploadFolder, Path.GetFileName(doc.FileUrl));
+                    if (File.Exists(filePath)) File.Delete(filePath);
+                }
+
+                // delete from DB
+                await _repo.DeleteAsync(docId);
+                _logger.LogInformation("Deleted document {DocId}", docId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting document {DocId}", docId);
+                return false;
+            }
         }
     }
 }

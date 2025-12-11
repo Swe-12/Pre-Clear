@@ -8,6 +8,7 @@ namespace PreClear.Api.Models
         public long ShipmentId { get; set; }
         public string Code { get; set; } = null!;
         public string Message { get; set; } = null!;
+        public string Severity { get; set; } = "warning"; // "info", "warning", "critical"
         public long? CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool Resolved { get; set; }

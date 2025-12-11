@@ -35,5 +35,15 @@ namespace PreClear.Api.Repositories
             _db.ShipmentDocuments.Update(doc);
             await _db.SaveChangesAsync();
         }
+
+        public async Task DeleteAsync(long id)
+        {
+            var doc = await _db.ShipmentDocuments.FindAsync(id);
+            if (doc != null)
+            {
+                _db.ShipmentDocuments.Remove(doc);
+                await _db.SaveChangesAsync();
+            }
+        }
     }
 }

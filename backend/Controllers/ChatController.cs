@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,11 +14,13 @@ namespace PreClear.Api.Controllers
     public class ChatController : ControllerBase
     {
         private readonly IChatService _chatService;
+        private readonly IChatMessageService _chatMsgService;
         private readonly ILogger<ChatController> _logger;
 
-        public ChatController(IChatService chatService, ILogger<ChatController> logger)
+        public ChatController(IChatService chatService, IChatMessageService chatMsgService, ILogger<ChatController> logger)
         {
             _chatService = chatService;
+            _chatMsgService = chatMsgService;
             _logger = logger;
         }
 
@@ -59,10 +62,61 @@ namespace PreClear.Api.Controllers
             return CreatedAtAction(nameof(GetMessages), new { shipmentId = shipmentId }, dto);
         }
 
+        // New shipment-specific chat endpoints with sender role support
+        [HttpPost("send/{shipmentId}")]
+        public async Task<IActionResult> Send(long shipmentId, [FromBody] SendMessageRequestV2 req)
+        {
+            if (req == null || string.IsNullOrWhiteSpace(req.Message))
+                return BadRequest(new { error = "message_required" });
+
+            try
+            {
+                var msg = await _chatMsgService.SendAsync(shipmentId, req.Message, req.Sender ?? "user", req.SenderId);
+                return Ok(msg);
+            }
+            catch (ArgumentException aex)
+            {
+                _logger.LogWarning(aex, "Invalid argument for send message");
+                return BadRequest(new { error = "invalid_argument", detail = aex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending chat message");
+                return StatusCode(500, new { error = "internal_error" });
+            }
+        }
+
+        [HttpGet("{shipmentId}")]
+        public async Task<IActionResult> GetHistory(long shipmentId)
+        {
+            try
+            {
+                var history = await _chatMsgService.GetHistoryAsync(shipmentId);
+                return Ok(history);
+            }
+            catch (ArgumentException aex)
+            {
+                _logger.LogWarning(aex, "Invalid argument for get history");
+                return BadRequest(new { error = "invalid_argument", detail = aex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching chat history");
+                return StatusCode(500, new { error = "internal_error" });
+            }
+        }
+
         public class SendMessageRequest
         {
             public long? SenderId { get; set; }
             public string Message { get; set; } = string.Empty;
+        }
+
+        public class SendMessageRequestV2
+        {
+            public string Message { get; set; } = string.Empty;
+            public string Sender { get; set; } = "user"; // "user" or "bot"
+            public long? SenderId { get; set; }
         }
 
         public class ShipmentMessageDto

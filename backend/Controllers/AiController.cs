@@ -1,6 +1,9 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using PreClear.Api.Interfaces;
+using PreClear.Api.Models;
 
 namespace PreClear.Api.Controllers
 {
@@ -42,6 +45,63 @@ namespace PreClear.Api.Controllers
             {
                 _logger.LogError(ex, "Unexpected error during AI analysis");
                 return StatusCode(500, new { error = "internal_error", detail = "An unexpected error occurred while analyzing the description." });
+            }
+        }
+
+        [HttpPost("extract-text")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> ExtractText([FromForm] ExtractTextRequest request)
+        {
+            if (request?.File == null)
+                return BadRequest(new { error = "file_required" });
+
+            try
+            {
+                var result = await _ai.ExtractTextAsync(request.File);
+                return Ok(result);
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "Error during extract-text");
+                return StatusCode(500, new { error = "internal_error" });
+            }
+        }
+
+        [HttpPost("validate-invoice")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> ValidateInvoice([FromForm] ValidateInvoiceRequest request)
+        {
+            if (request?.File == null)
+                return BadRequest(new { error = "file_required" });
+
+            try
+            {
+                var result = await _ai.ValidateInvoiceAsync(request.File);
+                return Ok(result);
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "Error during validate-invoice");
+                return StatusCode(500, new { error = "internal_error" });
+            }
+        }
+
+        [HttpPost("validate-packing-list")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> ValidatePackingList([FromForm] ValidatePackingListRequest request)
+        {
+            if (request?.File == null)
+                return BadRequest(new { error = "file_required" });
+
+            try
+            {
+                var result = await _ai.ValidatePackingListAsync(request.File);
+                return Ok(result);
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "Error during validate-packing-list");
+                return StatusCode(500, new { error = "internal_error" });
             }
         }
     }

@@ -28,6 +28,16 @@ builder.Services.AddScoped<PreClear.Api.Interfaces.IShipmentRepository, PreClear
 builder.Services.AddScoped<PreClear.Api.Interfaces.IShipmentService, PreClear.Api.Services.ShipmentService>();
 builder.Services.AddScoped<PreClear.Api.Interfaces.IDocumentRepository, PreClear.Api.Repositories.DocumentRepository>();
 builder.Services.AddScoped<PreClear.Api.Interfaces.IDocumentService, PreClear.Api.Services.DocumentService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IExceptionService, PreClear.Api.Services.ExceptionService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IExceptionRepository, PreClear.Api.Repositories.ExceptionRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IUserService, PreClear.Api.Services.UserService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IUserRepository, PreClear.Api.Repositories.UserRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IChatMessageService, PreClear.Api.Services.ChatMessageService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IChatMessageRepository, PreClear.Api.Repositories.ChatMessageRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.INotificationService, PreClear.Api.Services.NotificationService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.INotificationRepository, PreClear.Api.Repositories.NotificationRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IInvoiceService, PreClear.Api.Services.InvoiceService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IInvoiceRepository, PreClear.Api.Repositories.InvoiceRepository>();
 
 // Connection
 var conn = builder.Configuration.GetConnectionString("DefaultConnection");

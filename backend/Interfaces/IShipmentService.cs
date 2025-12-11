@@ -1,10 +1,16 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using PreClear.Api.Models;
+
 namespace PreClear.Api.Interfaces
 {
     public interface IShipmentService
     {
-        System.Threading.Tasks.Task<System.Collections.Generic.List<PreClear.Api.Models.Shipment>> GetByUserAsync(long userId);
-        System.Threading.Tasks.Task<PreClear.Api.Models.Shipment> CreateAsync(PreClear.Api.Models.CreateShipmentDto dto);
-        System.Threading.Tasks.Task<PreClear.Api.Models.Shipment?> GetByIdAsync(long id);
-        System.Threading.Tasks.Task<bool> UpdateStatusAsync(long shipmentId, string status);
+        Task<Shipment> CreateShipmentAsync(CreateShipmentRequest request);
+        Task<IEnumerable<Shipment>> GetShipmentsByUserAsync(long userId);
+        Task<Shipment?> GetShipmentByIdAsync(long id);
+        Task<Shipment?> UpdateShipmentAsync(long id, UpdateShipmentRequest request);
+        Task<bool> ChangeStatusAsync(long id, string newStatus, long? performedBy = null, string? notes = null);
     }
 }
+ 

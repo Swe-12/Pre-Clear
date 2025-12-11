@@ -161,6 +161,8 @@ export function CreateShipment({ onNavigate, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    (async () => {
     
     // Validate all products have required fields
     const productErrors = [];
@@ -251,8 +253,46 @@ export function CreateShipment({ onNavigate, onSave }) {
       }))
     };
 
-    shipmentsStore.saveShipment(newShipment);
-    onNavigate('shipment-details', newShipment);
+      // build payload for backend
+      const payload = {
+        userId: 1,
+        productName: newShipment.productName,
+        items: products.map(p => ({
+          productName: p.name,
+          description: p.description,
+          hsCode: p.hsCode,
+          quantity: parseFloat(p.quantity) || 0,
+          weight: parseFloat(p.weight) || 0,
+          unitPrice: parseFloat(p.value) || 0
+        })),
+        currency: newShipment.currency,
+        totalValue: parseFloat(newShipment.value) || 0,
+        totalWeight: parseFloat(newShipment.weight) || 0,
+        shipperName: newShipment.shipperName,
+        documents: newShipment.documents.map(d => ({ name: d.name, type: d.type }))
+      };
+
+      try {
+        const res = await fetch('/api/shipments/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const created = await res.json();
+          // navigate to details using server response
+          onNavigate('shipment-details', { id: created.id });
+          return;
+        }
+      } catch (err) {
+        console.error('Error creating shipment on server, falling back to local store', err);
+      }
+
+      // fallback to local store if server call failed
+      shipmentsStore.saveShipment(newShipment);
+      onNavigate('shipment-details', newShipment);
+    })();
   };
 
   const HSCodeSuggestionPanel = ({ productId, suggestions }) => {
