@@ -24,6 +24,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { useShipments } from '../../hooks/useShipments';
+import { ApprovalLogs } from '../admin/ApprovalLogs';
 import { ConstraintsValidationWidget } from '../ConstraintsValidationWidget';
 import { ShipmentChatPanel } from '../ShipmentChatPanel';
 import { shipmentsStore } from '../../store/shipmentsStore';
@@ -33,6 +34,7 @@ export function ShipmentDetails({ shipment, onNavigate }) {
   const { updateShipmentStatus, updateAIApproval, requestBrokerApproval, uploadDocument } = useShipments();
   const [currentShipment, setCurrentShipment] = useState(shipment);
   const [chatOpen, setChatOpen] = useState(false);
+  const [showAudit, setShowAudit] = useState(false);
   const [uploadingDocKey, setUploadingDocKey] = useState(null);
   const [aiProcessing, setAiProcessing] = useState(false);
   const [requestingBroker, setRequestingBroker] = useState(false);
@@ -263,13 +265,23 @@ export function ShipmentDetails({ shipment, onNavigate }) {
             <h1 className="text-slate-900 mb-2">Shipment Details</h1>
             <p className="text-slate-600">Complete shipment ID: {currentShipment.id}</p>
           </div>
-          <button
-            onClick={() => setChatOpen(true)}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
-          >
-            <MessageCircle className="w-4 h-4" />
-            Chat with Broker
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setChatOpen(true)}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Chat with Broker
+            </button>
+
+            <button
+              onClick={() => setShowAudit(s => !s)}
+              className="px-4 py-2 bg-slate-100 text-slate-800 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              View Audit Trail
+            </button>
+          </div>
         </div>
       </div>
 
@@ -922,6 +934,13 @@ export function ShipmentDetails({ shipment, onNavigate }) {
           </div>
         </div>
       )}
+      {/* Inline audit view */}
+      {showAudit && (
+        <div className="mt-6">
+          <ApprovalLogs shipmentId={currentShipment.id} />
+        </div>
+      )}
+
     </div>
   );
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PreClear.Api.Data;
 
@@ -10,9 +11,11 @@ using PreClear.Api.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(PreclearDbContext))]
-    partial class PreclearDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251211154741_AddSyncLog")]
+    partial class AddSyncLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -450,46 +453,6 @@ namespace backend.Migrations
                         .HasDatabaseName("idx_notifications_user");
 
                     b.ToTable("notifications", (string)null);
-                });
-
-            modelBuilder.Entity("PreClear.Api.Models.Payment", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("amount");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime(3)")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP(3)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)")
-                        .HasDefaultValue("pending")
-                        .HasColumnName("status");
-
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("idx_payments_created_at");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("idx_payments_user");
-
-                    b.ToTable("payments", (string)null);
                 });
 
             modelBuilder.Entity("PreClear.Api.Models.RuleChangeRequest", b =>

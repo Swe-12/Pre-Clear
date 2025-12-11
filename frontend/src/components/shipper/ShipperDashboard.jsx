@@ -1,5 +1,6 @@
 import { PackagePlus, Package, Clock, CheckCircle, XCircle, AlertTriangle, TrendingUp, Upload, DollarSign, Eye, Edit, Filter, MessageSquare } from 'lucide-react';
 import { NotificationPanel } from '../NotificationPanel';
+import DashboardSummaryWidget from '../DashboardSummaryWidget';
 import { shipmentsStore, createDefaultShipment } from '../../store/shipmentsStore';
 import { useState } from 'react';
 import { useShipments } from '../../hooks/useShipments';
@@ -253,6 +254,9 @@ export function ShipperDashboard({ onNavigate }) {
       <div className="mb-6">
         <NotificationPanel role="shipper" onNavigate={onNavigate} />
       </div>
+
+      {/* Global Summary from backend */}
+      <DashboardSummaryWidget />
 
       {/* Quick Actions - Create Shipment Button */}
       <div className="mb-8">

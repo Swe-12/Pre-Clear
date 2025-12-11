@@ -1,4 +1,7 @@
 import { Users, Settings, BarChart3, Shield, TrendingUp, Activity, MapPin } from 'lucide-react';
+import DashboardSummaryWidget from '../DashboardSummaryWidget';
+import SyncRunner from './SyncRunner';
+import PaymentRunner from './PaymentRunner';
 
 export function AdminDashboard({ onNavigate }) {
   // Mock shipping data (replace with real API data when available)
@@ -20,6 +23,20 @@ export function AdminDashboard({ onNavigate }) {
       <div className="mb-8">
         <h1 className="text-slate-900 mb-2">Admin Dashboard</h1>
         <p className="text-slate-600">System overview and management</p>
+      </div>
+
+      {/* Global summary */}
+      <div className="mb-6">
+        {/* lazy-load widget to avoid API coupling in static mock area */}
+        <DashboardSummaryWidget />
+      </div>
+
+      <div className="mb-6">
+        <SyncRunner />
+      </div>
+
+      <div className="mb-6">
+        <PaymentRunner />
       </div>
 
       {/* Stats */}

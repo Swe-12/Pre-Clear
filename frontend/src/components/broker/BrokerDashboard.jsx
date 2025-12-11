@@ -10,6 +10,7 @@ import {
   Zap
 } from 'lucide-react';
 import { ShipmentChatPanel } from '../ShipmentChatPanel';
+import DashboardSummaryWidget from '../DashboardSummaryWidget';
 import { shipmentsStore } from '../../store/shipmentsStore';
 import { useState, useEffect } from 'react';
 import { useShipments } from '../../hooks/useShipments';
@@ -167,6 +168,9 @@ export function BrokerDashboard({ onNavigate }) {
 
         {/* notifications removed */}
       </div>
+
+      {/* Global summary */}
+      <DashboardSummaryWidget />
 
       {/* notification panel removed from dashboard */}
 

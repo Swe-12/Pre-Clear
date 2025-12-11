@@ -38,6 +38,15 @@ builder.Services.AddScoped<PreClear.Api.Interfaces.INotificationService, PreClea
 builder.Services.AddScoped<PreClear.Api.Interfaces.INotificationRepository, PreClear.Api.Repositories.NotificationRepository>();
 builder.Services.AddScoped<PreClear.Api.Interfaces.IInvoiceService, PreClear.Api.Services.InvoiceService>();
 builder.Services.AddScoped<PreClear.Api.Interfaces.IInvoiceRepository, PreClear.Api.Repositories.InvoiceRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IBrokerAssignmentService, PreClear.Api.Services.BrokerAssignmentService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IAuditLogService, PreClear.Api.Services.AuditLogService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IAuditLogRepository, PreClear.Api.Repositories.AuditLogRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.ITagService, PreClear.Api.Services.TagService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.ITagRepository, PreClear.Api.Repositories.TagRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IDashboardService, PreClear.Api.Services.DashboardService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.ISyncService, PreClear.Api.Services.SyncService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IPaymentRepository, PreClear.Api.Repositories.PaymentRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IPaymentService, PreClear.Api.Services.PaymentService>();
 
 // Connection
 var conn = builder.Configuration.GetConnectionString("DefaultConnection");

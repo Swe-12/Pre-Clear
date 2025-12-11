@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PreClear.Api.Data;
 
@@ -10,9 +11,11 @@ using PreClear.Api.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(PreclearDbContext))]
-    partial class PreclearDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251211091903_AddBrokerAssignment")]
+    partial class AddBrokerAssignment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -147,23 +150,29 @@ namespace backend.Migrations
 
                     b.Property<string>("Action")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
                         .HasColumnName("action");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<string>("Details")
+                        .HasColumnType("json")
+                        .HasColumnName("details");
+
+                    b.Property<string>("Entity")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("entity");
+
+                    b.Property<long?>("EntityId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("entity_id");
+
+                    b.Property<DateTime>("PerformedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime(3)")
-                        .HasColumnName("created_at")
+                        .HasColumnName("performed_at")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP(3)");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text")
-                        .HasColumnName("description");
-
-                    b.Property<long?>("ShipmentId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("shipment_id");
 
                     b.Property<long?>("UserId")
                         .HasColumnType("bigint")
@@ -171,14 +180,10 @@ namespace backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("idx_audit_created_at");
+                    b.HasIndex("UserId");
 
-                    b.HasIndex("ShipmentId")
-                        .HasDatabaseName("idx_audit_shipment");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("idx_audit_user");
+                    b.HasIndex("Entity", "EntityId")
+                        .HasDatabaseName("idx_audit_entity");
 
                     b.ToTable("audit_logs", (string)null);
                 });
@@ -450,46 +455,6 @@ namespace backend.Migrations
                         .HasDatabaseName("idx_notifications_user");
 
                     b.ToTable("notifications", (string)null);
-                });
-
-            modelBuilder.Entity("PreClear.Api.Models.Payment", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)")
-                        .HasColumnName("amount");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime(3)")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP(3)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)")
-                        .HasDefaultValue("pending")
-                        .HasColumnName("status");
-
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("idx_payments_created_at");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("idx_payments_user");
-
-                    b.ToTable("payments", (string)null);
                 });
 
             modelBuilder.Entity("PreClear.Api.Models.RuleChangeRequest", b =>
@@ -1273,70 +1238,6 @@ namespace backend.Migrations
                     b.ToTable("shipment_tracking", (string)null);
                 });
 
-            modelBuilder.Entity("PreClear.Api.Models.SyncLog", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Details")
-                        .HasColumnType("text")
-                        .HasColumnName("details");
-
-                    b.Property<int>("ImportedCount")
-                        .HasColumnType("int")
-                        .HasColumnName("imported_count");
-
-                    b.Property<DateTime>("RunAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime(3)")
-                        .HasColumnName("run_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP(3)");
-
-                    b.Property<int>("UpdatedCount")
-                        .HasColumnType("int")
-                        .HasColumnName("updated_count");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RunAt")
-                        .HasDatabaseName("idx_synclogs_runat");
-
-                    b.ToTable("sync_logs", (string)null);
-                });
-
-            modelBuilder.Entity("PreClear.Api.Models.Tag", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime(3)")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP(3)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)")
-                        .HasColumnName("name");
-
-                    b.Property<long>("ShipmentId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("shipment_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ShipmentId")
-                        .HasDatabaseName("idx_tags_shipment");
-
-                    b.ToTable("tags", (string)null);
-                });
-
             modelBuilder.Entity("PreClear.Api.Models.User", b =>
                 {
                     b.Property<long>("Id")
@@ -1681,16 +1582,6 @@ namespace backend.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_tracking_shipment");
-                });
-
-            modelBuilder.Entity("PreClear.Api.Models.Tag", b =>
-                {
-                    b.HasOne("PreClear.Api.Models.Shipment", null)
-                        .WithMany()
-                        .HasForeignKey("ShipmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_tags_shipment");
                 });
 
             modelBuilder.Entity("PreClear.Api.Models.Shipment", b =>
