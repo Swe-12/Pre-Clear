@@ -75,27 +75,6 @@ export function AdminDashboard({ onNavigate }) {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <button
-          onClick={() => onNavigate('user-management')}
-          className="p-6 bg-white rounded-xl border border-slate-200 hover:shadow-lg transition-all text-left"
-        >
-          <Users className="w-8 h-8 text-blue-600 mb-3" />
-          <h3 className="text-slate-900 mb-2">User Management</h3>
-          <p className="text-slate-600 text-sm">Manage shippers and brokers</p>
-        </button>
-
-        <button
-          onClick={() => onNavigate('import-export-rules')}
-          className="p-6 bg-white rounded-xl border border-slate-200 hover:shadow-lg transition-all text-left"
-        >
-          <Shield className="w-8 h-8 text-green-600 mb-3" />
-          <h3 className="text-slate-900 mb-2">Import/Export Rules</h3>
-          <p className="text-slate-600 text-sm">Manage compliance rules and regulations</p>
-        </button>
-      </div>
-
       {/* Shipping Insights */}
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white rounded-xl p-6 border border-slate-200 shadow-sm">

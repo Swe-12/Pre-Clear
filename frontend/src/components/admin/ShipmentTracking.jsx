@@ -13,19 +13,19 @@ export function ShipmentTracking() {
         <span>Shipment Tracking Overview</span>
       </h1>
       <p className="text-slate-600 mb-8">Track all shipments across the platform</p>
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-xl overflow-hidden" style={{ border: '2px solid #3A2B28' }}>
         <table className="w-full">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left py-4 px-6 text-slate-700">Shipment ID</th>
-              <th className="text-left py-4 px-6 text-slate-700">Token</th>
-              <th className="text-left py-4 px-6 text-slate-700">Route</th>
-              <th className="text-left py-4 px-6 text-slate-700">Status</th>
+            <tr style={{ background: '#D4AFA0' }}>
+              <th className="text-left py-4 px-6 font-semibold" style={{ color: '#2F1B17', width: '20%' }}>Shipment ID</th>
+              <th className="text-left py-4 px-6 font-semibold" style={{ color: '#2F1B17', width: '25%' }}>Token</th>
+              <th className="text-left py-4 px-6 font-semibold" style={{ color: '#2F1B17', width: '30%' }}>Route</th>
+              <th className="text-left py-4 px-6 font-semibold" style={{ color: '#2F1B17', width: '25%' }}>Status</th>
             </tr>
           </thead>
           <tbody>
             {shipments.map((shipment) => (
-              <tr key={shipment.id} className="border-b border-slate-100">
+              <tr key={shipment.id} className="border-b" style={{ borderColor: '#E6B6A0' }}>
                 <td className="py-4 px-6 text-slate-900">{shipment.id}</td>
                 <td className="py-4 px-6 text-blue-600 font-mono text-sm">{shipment.token}</td>
                 <td className="py-4 px-6 text-slate-700">{shipment.origin} → {shipment.dest}</td>

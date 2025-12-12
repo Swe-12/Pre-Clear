@@ -21,6 +21,8 @@ import { ShipmentBooking } from "./components/shipper/ShipmentBooking";
 import { PaymentPage } from "./components/shipper/PaymentPage";
 import { PaymentList } from "./components/shipper/PaymentList";
 import { ShipperProfile } from "./components/shipper/ShipperProfile";
+import { BookedPaidShipments } from "./components/shipper/BookedPaidShipments";
+import { BookedShipmentDetails } from "./components/shipper/BookedShipmentDetails";
 
 // Broker Pages
 import { BrokerDashboard } from "./components/broker/BrokerDashboard";
@@ -75,7 +77,7 @@ function AppContent() {
       case "create-shipment":
         return (
           <ShipmentForm
-            shipment={currentShipment || createDefaultShipment()}
+            shipment={createDefaultShipment()}
             onNavigate={handleNavigate}
           />
         );
@@ -145,6 +147,15 @@ function AppContent() {
         );
       case "payment-list":
         return <PaymentList onNavigate={handleNavigate} />;
+      case "booked-paid":
+        return <BookedPaidShipments onNavigate={handleNavigate} />;
+      case "booked-shipment-details":
+        return (
+          <BookedShipmentDetails
+            shipment={currentShipment}
+            onNavigate={handleNavigate}
+          />
+        );
       case "profile":
         return <ShipperProfile />;
       default:
