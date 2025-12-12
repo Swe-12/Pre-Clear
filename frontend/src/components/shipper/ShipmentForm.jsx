@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { shipmentsStore } from '../../store/shipmentsStore';
 import { suggestHSCode, validateAndCheckHSCode, getCurrencyByCountry } from '../../utils/validation';
+import { HsSuggestionPanel } from './HsSuggestionPanel';
 
 const modes = ['Air', 'Sea', 'Road', 'Rail', 'Courier', 'Multimodal'];
 const shipmentTypes = ['Domestic', 'International'];
@@ -213,6 +214,16 @@ const CollapsibleSection = ({ title, isOpen, onToggle, children, icon: Icon }) =
   </div>
 );
 
+const OvalButton = ({ children, className = '', style = {}, ...props }) => (
+  <button
+    {...props}
+    className={className}
+    style={{ border: 'none', borderRadius: '9999px', padding: '0.5rem 1rem', outline: 'none', ...style }}
+  >
+    {children}
+  </button>
+);
+
 const InputField = ({ label, type = 'text', name, value, onChange, required = false, placeholder = '', disabled = false }) => (
   <div>
     <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -318,11 +329,24 @@ export function ShipmentForm({ shipment, onNavigate }) {
   const [loadingHsSuggestions, setLoadingHsSuggestions] = useState({});
   const [hsValidation, setHsValidation] = useState({});
   const [selectedHsIndex, setSelectedHsIndex] = useState({});
+  const [hsSections, setHsSections] = useState([]);
+  const [currentStep, setCurrentStep] = useState(1);
 
-  // Shared yellow button style used across the form (darker yellow, coffee-brown border/text)
-  const yellowButtonStyle = { background: '#F2B705', color: '#2F1B17', border: '1px solid #2F1B17' };
-  // Grey style for Cancel button
-  const greyButtonStyle = { background: '#E5E7EB', color: '#111827', border: '1px solid #D1D5DB' };
+  // Step labels for navigation
+  const steps = [
+    { number: 1, title: 'Shipment Basics' },
+    { number: 2, title: 'Shipper Info' },
+    { number: 3, title: 'Consignee Info' },
+    { number: 4, title: 'Package & Contents' },
+    { number: 5, title: 'Service & Billing' },
+    { number: 6, title: 'Documents' }
+  ];
+
+  // Shared yellow button style used across the form (darker yellow, coffee-brown text)
+  // Buttons should be borderless and rounded per UI spec
+  const yellowButtonStyle = { background: '#F2B705', color: '#2F1B17', border: 'none', borderRadius: '9999px' };
+  // Grey style for secondary buttons (borderless)
+  const greyButtonStyle = { background: '#E5E7EB', color: '#111827', border: 'none', borderRadius: '9999px' };
 
 
   // Apply profile data into the form (used on load and when profile changes)
@@ -548,6 +572,24 @@ export function ShipmentForm({ shipment, onNavigate }) {
     });
   }, [formData.packages, formData.customsValue, formData.serviceLevel, formData.consignee?.country, formData.shipper?.country, formData.specialCommodity, formData.pickupType]);
 
+  // Load HS sections from backend dataset
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const resp = await fetch('/api/ai/hs/sections');
+        if (!resp.ok) return;
+        const body = await resp.json();
+        if (!mounted) return;
+        // body expected as array of { code, title }
+        setHsSections(Array.isArray(body) ? body : []);
+      } catch (err) {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   // Trigger HS code suggestions when product name/description/category change (iterate packages -> products)
   useEffect(() => {
     if (!formData.packages) return;
@@ -561,7 +603,7 @@ export function ShipmentForm({ shipment, onNavigate }) {
 
         try {
           setLoadingHsSuggestions(prev => ({ ...prev, [productKey]: true }));
-          const suggestions = await suggestHSCode(product.name || '', product.description || '');
+          const suggestions = await suggestHSCode(product.name || '', product.description || '', product.category || '');
           setHsSuggestions(prev => ({ ...prev, [productKey]: suggestions }));
         } catch (err) {
           console.error('HS suggestion error', err);
@@ -720,6 +762,35 @@ export function ShipmentForm({ shipment, onNavigate }) {
     }
   };
 
+  // Per-step validation for Next button enabling
+  const canProceed = (step) => {
+    if (step === 1) {
+      return !!(formData.title && formData.mode && formData.shipmentType);
+    }
+    if (step === 2) {
+      return !!(formData.shipper && formData.shipper.company);
+    }
+    if (step === 3) {
+      return !!(formData.consignee && formData.consignee.company);
+    }
+    if (step === 4) {
+      return !!(formData.packages && formData.packages.length > 0);
+    }
+    return true;
+  };
+
+  const handleNext = () => {
+    if (!canProceed(currentStep)) {
+      validateForm();
+      return;
+    }
+    setCurrentStep((s) => Math.min(6, s + 1));
+  };
+
+  const handlePrev = () => {
+    setCurrentStep((s) => Math.max(1, s - 1));
+  };
+
   // Download the current shipment summary as a PDF.
   // Uses jsPDF via CDN (dynamically injected) so no build-time dependency required.
   const downloadSummaryPdf = async () => {
@@ -769,10 +840,63 @@ export function ShipmentForm({ shipment, onNavigate }) {
     <div className="min-h-screen p-6" style={{ background: '#F5F5F5' }}>
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          {/* Step Navigation with Progress Line - Brown line, yellow current circle, brown completed circles with yellow numbers */}
+          <div className="bg-white rounded-lg p-6 mb-6 shadow-sm">
+            <div className="flex items-center justify-center w-full">
+              <div className="flex items-center w-full max-w-4xl">
+                {steps.map((s, idx) => {
+                  const isCompleted = currentStep > s.number;
+                  const isCurrent = currentStep === s.number;
+                  return (
+                    <div key={s.number} className="flex items-center flex-1">
+                      <button
+                        onClick={() => { setCurrentStep(s.number); setExpandedSections(prev => ({ ...prev, basics: s.number===1, shipper: s.number===2, consignee: s.number===3, packages: s.number===4, service: s.number===4, documents: s.number===5 })); }}
+                        className="focus:outline-none transition-all"
+                        aria-label={`Go to step ${s.number} ${s.title}`}
+                      >
+                        <div
+                          className="flex items-center justify-center"
+                          style={{
+                            width: 56,
+                            height: 56,
+                            borderRadius: 9999,
+                            background: isCurrent ? '#F2B705' : isCompleted ? '#6B4423' : '#E5E7EB',
+                            color: isCurrent ? '#2F1B17' : isCompleted ? '#F2B705' : '#9CA3AF',
+                            fontWeight: 700,
+                            fontSize: '1.125rem',
+                            boxShadow: isCurrent ? '0 4px 12px rgba(242,183,5,0.3)' : 'none',
+                            transition: 'all 0.3s ease'
+                          }}
+                        >
+                          {s.number}
+                        </div>
+                      </button>
+
+                      {idx < steps.length - 1 && (
+                        <div
+                          aria-hidden
+                          style={{
+                            height: 3,
+                            flex: 1,
+                            margin: '0 16px',
+                            background: isCompleted ? '#6B4423' : '#E5E7EB',
+                            borderRadius: 2,
+                            transition: 'background 0.3s ease'
+                          }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="text-center text-sm text-slate-500 mt-4">Step {currentStep} of {steps.length}</div>
+          </div>
           {/* BASICS SECTION */}
+          {currentStep === 1 && (
           <CollapsibleSection
             title="Shipment Basics"
-            isOpen={expandedSections.basics}
+            isOpen={true}
             onToggle={() => toggleSection('basics')}
             icon={Truck}
           >
@@ -851,25 +975,27 @@ export function ShipmentForm({ shipment, onNavigate }) {
               )}
             </div>
           </CollapsibleSection>
+          )}
 
           {/* SHIPPER SECTION */}
+          {currentStep === 2 && (
           <CollapsibleSection
             title="Shipper Information"
-            isOpen={expandedSections.shipper}
+            isOpen={true}
             onToggle={() => toggleSection('shipper')}
             icon={Users}
           >
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-slate-600">Autofilled from Profile. Use edit to adjust.</p>
-              <button
+              <OvalButton
                 type="button"
                 onClick={() => setShipperEditable(prev => !prev)}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg border"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg"
                 style={yellowButtonStyle}
               >
                   <Pencil className="w-4 h-4" style={{ color: '#2F1B17' }} />
                 <span style={{ color: '#2F1B17' }}>{shipperEditable ? 'Lock' : 'Edit'}</span>
-              </button>
+              </OvalButton>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <InputField
@@ -958,11 +1084,13 @@ export function ShipmentForm({ shipment, onNavigate }) {
 
             </div>
           </CollapsibleSection>
+          )}
 
           {/* CONSIGNEE SECTION */}
+          {currentStep === 3 && (
           <CollapsibleSection
             title="Consignee Information"
-            isOpen={expandedSections.consignee}
+            isOpen={true}
             onToggle={() => toggleSection('consignee')}
             icon={MapPin}
           >
@@ -1043,11 +1171,14 @@ export function ShipmentForm({ shipment, onNavigate }) {
               
             </div>
           </CollapsibleSection>
+          )}
 
-          {/* PACKAGE AND CONTENTS SECTION */}
+          {/* PACKAGE AND CONTENTS SECTION (step 4) - combined with Service & Billing */}
+          {currentStep === 4 && (
+          <>
           <CollapsibleSection
             title="Package and Contents"
-            isOpen={expandedSections.packages}
+            isOpen={true}
             onToggle={() => toggleSection('packages')}
             icon={Package}
           >
@@ -1056,14 +1187,14 @@ export function ShipmentForm({ shipment, onNavigate }) {
                 <div key={pkgIdx} className="border border-slate-200 rounded-lg p-5 bg-white shadow-sm">
                   <div className="flex justify-between items-start mb-4">
                     <h4 className="font-semibold text-slate-900 text-lg">Package {pkgIdx + 1}</h4>
-                    <button
+                    <OvalButton
                       onClick={() => removeArrayItem('packages', pkgIdx)}
                       className="p-2 rounded transition-colors"
-                      style={{ background: 'transparent', border: 'none' }}
+                      style={{ background: 'transparent' }}
                       aria-label={`Remove package ${pkgIdx + 1}`}
                     >
                       <Trash2 className="w-5 h-5" style={{ color: '#dc2626' }} />
-                    </button>
+                    </OvalButton>
                   </div>
                   
                   {/* Package Details */}
@@ -1127,7 +1258,7 @@ export function ShipmentForm({ shipment, onNavigate }) {
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <h5 className="text-sm font-medium" style={{ color: '#0f0e0eff', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' }}>Product Contents</h5>
-                      <button
+                      <OvalButton
                         type="button"
                         onClick={() => {
                           const currentProducts = pkg.products || [];
@@ -1146,11 +1277,11 @@ export function ShipmentForm({ shipment, onNavigate }) {
                           };
                           handleArrayChange('packages', pkgIdx, 'products', [...currentProducts, newProduct]);
                         }}
-                        className="px-3 py-1.5 text-sm rounded-lg flex items-center gap-2"
+                        className="px-3 py-1.5 text-sm flex items-center gap-2"
                         style={yellowButtonStyle}
                       >
                         <Plus className="w-4 h-4" style={{ color: '#2F1B17' }} /> Add Product
-                      </button>
+                      </OvalButton>
                     </div>
                     
                     {pkg.products && pkg.products.length > 0 ? (
@@ -1159,18 +1290,18 @@ export function ShipmentForm({ shipment, onNavigate }) {
                           <div key={product.id || prodIdx} className="border border-slate-200 rounded-lg p-4 bg-slate-50">
                             <div className="flex justify-between items-start mb-3">
                               <h6 className="font-medium text-slate-900">Product {prodIdx + 1}</h6>
-                              <button
+                              <OvalButton
                                 type="button"
                                 onClick={() => {
                                   const updatedProducts = pkg.products.filter((_, i) => i !== prodIdx);
                                   handleArrayChange('packages', pkgIdx, 'products', updatedProducts);
                                 }}
                                 className="rounded transition-colors p-1"
-                                style={{ background: 'transparent', border: 'none' }}
+                                style={{ background: 'transparent' }}
                                 aria-label={`Remove product ${prodIdx + 1}`}
                               >
                                 <Trash2 className="w-4 h-4" style={{ color: '#dc2626' }} />
-                              </button>
+                              </OvalButton>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <InputField
@@ -1184,8 +1315,8 @@ export function ShipmentForm({ shipment, onNavigate }) {
                                 }}
                                 placeholder="Electronic Integrated Circuits"
                               />
-                              <InputField
-                                label="Category"
+                              <SelectField
+                                label="Category (HS Section)"
                                 name="category"
                                 value={product.category || ''}
                                 onChange={(e) => {
@@ -1193,7 +1324,11 @@ export function ShipmentForm({ shipment, onNavigate }) {
                                   updatedProducts[prodIdx] = { ...updatedProducts[prodIdx], category: e.target.value };
                                   handleArrayChange('packages', pkgIdx, 'products', updatedProducts);
                                 }}
-                                placeholder="Electronics, Textiles, Medical, etc."
+                                options={hsSections.map(section => ({
+                                  value: section.code,
+                                  label: `${section.code} - ${section.title}`
+                                }))}
+                                required={false}
                               />
                               <div className="md:col-span-2">
                                 <InputField
@@ -1227,56 +1362,23 @@ export function ShipmentForm({ shipment, onNavigate }) {
                                   />
 
                                   {/* HS code suggestions (AI) */}
-                                  {loadingHsSuggestions[product.id] && (
-                                    <p className="text-xs text-slate-500 mt-1">Fetching HS suggestions…</p>
-                                  )}
-
-                                  {hsSuggestions[product.id] && hsSuggestions[product.id].length > 0 && (
-                                    <div className="mt-3 w-full rounded-lg border-2 overflow-hidden" style={{ background: '#EAD8C3', borderColor: '#2F1B17' }}>
-                                      <div className="p-3">
-                                        <div className="flex items-center gap-3 mb-2">
-                                          <span className="w-3 h-3 rounded-full inline-block" style={{ background: '#2F1B17' }} aria-hidden="true"></span>
-                                          <h4 className="font-semibold" style={{ color: '#2F1B17' }}>AI Suggested HS Codes</h4>
-                                        </div>
-                                        <p className="text-xs mb-2" style={{ color: '#2F1B17' }}>These suggestions are generated by the system — verify before use.</p>
-
-                                        <div className="w-full max-h-48 overflow-y-auto pr-2">
-                                          <div className="space-y-2">
-                                            {hsSuggestions[product.id].map((s, idx) => {
-                                              const code = s && (s.code || s);
-                                              const desc = s && s.description;
-                                              return (
-                                                <button
-                                                  key={idx}
-                                                  type="button"
-                                                  onClick={() => {
-                                                    const updatedProducts = [...pkg.products];
-                                                    updatedProducts[prodIdx] = { ...updatedProducts[prodIdx], hsCode: code.toString() };
-                                                    handleArrayChange('packages', pkgIdx, 'products', updatedProducts);
-                                                    setSelectedHsIndex(prev => ({ ...prev, [product.id]: idx }));
-                                                  }}
-                                                  className="w-full text-left border rounded-md p-3 shadow-sm transition"
-                                                    style={{ background: '#FBF9F6', border: '1px solid #D4C5B9', color: '#2F1B17' }}
-                                                >
-                                                  <div className="flex items-center justify-between">
-                                                    <div className="text-sm font-medium">{code}</div>
-                                                    {desc && <div className="text-xs">{desc}</div>}
-                                                  </div>
-                                                </button>
-                                              );
-                                            })}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
+                                  <HsSuggestionPanel
+                                    suggestions={hsSuggestions[product.id] || []}
+                                    loading={loadingHsSuggestions[product.id] || false}
+                                    selectedCode={product.hsCode}
+                                    onSelect={(code) => {
+                                      const updatedProducts = [...pkg.products];
+                                      updatedProducts[prodIdx] = { ...updatedProducts[prodIdx], hsCode: code };
+                                      handleArrayChange('packages', pkgIdx, 'products', updatedProducts);
+                                    }}
+                                  />
 
                                   {hsValidation[product.id] && (
-                                    <p className="text-xs mt-1">
+                                    <p className="text-xs mt-3">
                                       {hsValidation[product.id].valid ? (
-                                        <span className="text-green-700">HS code looks valid</span>
+                                        <span className="text-green-700 font-medium">✓ HS code looks valid</span>
                                       ) : (
-                                        <span className="text-red-700">HS code may be invalid or require review</span>
+                                        <span className="text-red-700 font-medium">⚠ HS code may be invalid or require review</span>
                                       )}
                                     </p>
                                   )}
@@ -1375,7 +1477,7 @@ export function ShipmentForm({ shipment, onNavigate }) {
                   </div>
                 </div>
               ))}
-              <button
+              <OvalButton
                 onClick={() => addArrayItem('packages', {
                   id: `PKG-${Date.now()}`,
                   type: '',
@@ -1388,19 +1490,22 @@ export function ShipmentForm({ shipment, onNavigate }) {
                   stackable: false,
                   products: [],
                 })}
-                className="w-full py-3 rounded-lg flex items-center justify-center gap-2 font-medium"
-                style={{ ...yellowButtonStyle, borderStyle: 'dashed' }}
+                className="w-full py-3 flex items-center justify-center gap-2 font-medium"
+                style={{ ...yellowButtonStyle }}
               >
                 <Plus className="w-5 h-5" style={{ color: '#2F1B17' }} /> Add Package
-              </button>
+              </OvalButton>
             </div>
           </CollapsibleSection>
+          </>
+          )}
 
 
-          {/* SERVICE & BILLING SECTION */}
+          {/* SERVICE & BILLING SECTION (step 5) */}
+          {currentStep === 5 && (
           <CollapsibleSection
             title="Service & Billing"
-            isOpen={expandedSections.service}
+            isOpen={true}
             onToggle={() => toggleSection('service')}
             icon={DollarSign}
           >
@@ -1449,17 +1554,18 @@ export function ShipmentForm({ shipment, onNavigate }) {
               </div>
             </div>
           </CollapsibleSection>
+          )}
 
-          {/* COMPLIANCE & ATTACHMENTS SECTION */}
+          {/* REQUIRED DOCUMENTS SECTION (step 6) */}
+          {currentStep === 6 && (
           <CollapsibleSection
             title="Required Documents"
-            isOpen={expandedSections.documents}
+            isOpen={true}
             onToggle={() => toggleSection('documents')}
             icon={Sparkles}
           >
             <div className="space-y-6">
-              {/* AI Document Suggestions */}
-                <div className="border-2 rounded-xl p-6" style={{ background: '#EAD8C3', borderColor: '#2F1B17' }}>
+              <div className="border-2 rounded-xl p-6" style={{ background: '#EAD8C3', borderColor: '#2F1B17' }}>
                 <div className="flex items-center gap-3 mb-4">
                   <Sparkles className="w-6 h-6" style={{ color: '#2F1B17' }} />
                   <h4 className="text-lg font-semibold" style={{ color: '#2F1B17' }}>AI-Powered Required Documents</h4>
@@ -1467,7 +1573,7 @@ export function ShipmentForm({ shipment, onNavigate }) {
                 <p className="text-sm mb-4" style={{ color: '#2F1B17' }}>
                   Based on your shipment details, the following documents are required for customs clearance:
                 </p>
-                
+
                 {analyzingDocuments ? (
                   <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-slate-300">
                     <span className="inline-block w-3 h-3 rounded-full animate-pulse" style={{ background: '#2F1B17' }}></span>
@@ -1496,17 +1602,15 @@ export function ShipmentForm({ shipment, onNavigate }) {
                               accept=".pdf,.jpg,.jpeg,.png"
                               onChange={(e) => {
                                 const file = e.target.files[0];
-                                if (file) {
-                                  setDocumentFiles(prev => ({ ...prev, [doc.name]: file }));
-                                }
+                                if (file) setDocumentFiles(prev => ({ ...prev, [doc.name]: file }));
                               }}
                               className="hidden"
                               id={`file-${idx}`}
                             />
                             <label
                               htmlFor={`file-${idx}`}
-                              className="px-4 py-2 rounded-lg transition-colors cursor-pointer text-sm flex items-center gap-2 text-white font-medium"
-                              style={yellowButtonStyle}
+                              className="px-4 py-2 transition-colors cursor-pointer text-sm flex items-center gap-2 text-white font-medium"
+                              style={{ ...yellowButtonStyle, outline: 'none', boxShadow: 'none' }}
                             >
                               <Upload className="w-4 h-4" style={{ color: '#2F1B17' }} />
                               {documentFiles[doc.name] ? 'Change File' : 'Upload'}
@@ -1527,89 +1631,105 @@ export function ShipmentForm({ shipment, onNavigate }) {
                     )}
                   </div>
                 )}
-                
+
                 <div className="mt-6 flex gap-3">
-                  <button
+                  <OvalButton
                     type="button"
                     onClick={async () => {
                       setAnalyzingDocuments(true);
-                      // Simulate AI analysis - in real app, this would call an API
-                      await new Promise(resolve => setTimeout(resolve, 1500));
-                      
-                      // Generate document suggestions based on shipment data
+                      await new Promise(resolve => setTimeout(resolve, 800));
+                      // basic suggestion logic (kept from prior implementation)
                       const suggestedDocs = [
                         { name: 'Commercial Invoice', required: true, description: 'Required for all shipments' },
                         { name: 'Packing List', required: true, description: 'Required for all shipments' },
                       ];
-                      
-                      // Add documents based on HS codes
                       if (formData.packages) {
                         formData.packages.forEach(pkg => {
-                          if (pkg.products) {
-                            pkg.products.forEach(prod => {
-                              if (prod.hsCode) {
-                                // Add Certificate of Origin for international shipments
-                                if (formData.shipmentType === 'International' && 
-                                    !suggestedDocs.find(d => d.name === 'Certificate of Origin')) {
-                                  suggestedDocs.push({ 
-                                    name: 'Certificate of Origin', 
-                                    required: true,
-                                    description: 'Required for international shipments'
-                                  });
-                                }
-                                
-                                // Add Export License for certain HS codes
-                                if (prod.hsCode.startsWith('85') && 
-                                    !suggestedDocs.find(d => d.name === 'Export License')) {
-                                  suggestedDocs.push({ 
-                                    name: 'Export License', 
-                                    required: false,
-                                    description: 'May be required for electronic goods'
-                                  });
-                                }
+                          if (pkg.products) pkg.products.forEach(prod => {
+                            if (prod.hsCode) {
+                              if (formData.shipmentType === 'International' && !suggestedDocs.find(d => d.name === 'Certificate of Origin')) {
+                                suggestedDocs.push({ name: 'Certificate of Origin', required: true, description: 'Required for international shipments' });
                               }
-                            });
-                          }
+                              if (prod.hsCode.startsWith('85') && !suggestedDocs.find(d => d.name === 'Export License')) {
+                                suggestedDocs.push({ name: 'Export License', required: false, description: 'May be required for electronic goods' });
+                              }
+                            }
+                          });
                         });
                       }
-                      
                       setRequiredDocuments(suggestedDocs);
                       setAnalyzingDocuments(false);
                     }}
-                    className="px-4 py-2 rounded-lg flex items-center gap-2 font-medium text-sm text-white"
-                      style={yellowButtonStyle}
+                    className="px-4 py-2 flex items-center gap-2 font-medium text-sm text-white"
+                    style={yellowButtonStyle}
                   >
-                        <Sparkles className="w-4 h-4" style={{ color: '#2F1B17' }} />
+                    <Sparkles className="w-4 h-4" style={{ color: '#2F1B17' }} />
                     Analyze Documents
-                  </button>
+                  </OvalButton>
                 </div>
               </div>
+
+              <div className="flex items-center gap-3 w-full">
+                <OvalButton
+                  onClick={handleSubmit}
+                  className="flex-1 py-3 font-semibold"
+                  style={{ ...yellowButtonStyle, color: '#2F1B17' }}
+                >
+                  Submit for AI Review
+                </OvalButton>
+
+                <OvalButton
+                  onClick={() => onNavigate('dashboard')}
+                  className="flex-1 py-3 font-semibold"
+                  style={{ ...greyButtonStyle }}
+                >
+                  Cancel
+                </OvalButton>
+              </div>
+
             </div>
           </CollapsibleSection>
+          )}
 
-          {/* ACTION BUTTONS */}
-          <div className="flex gap-4 pt-8 border-t border-slate-200">
-              <button
-                onClick={handleSubmit}
-                className="flex-1 py-4 rounded-lg font-semibold flex items-center justify-center gap-2 flex-wrap"
-                style={yellowButtonStyle}
+          {/* ACTION BUTTONS - Conditional render based on step */}
+          {currentStep < 6 && (
+          <div className="pt-8 border-t border-slate-200">
+            {currentStep === 1 ? (
+              <OvalButton
+                onClick={handleNext}
+                className="w-full py-4 font-semibold text-center"
+                style={{ ...yellowButtonStyle }}
+                disabled={!canProceed(currentStep)}
               >
-              <CheckCircle2 className="w-5 h-5" />
-              <span>{formData.status === 'token-generated' ? 'Proceed to Booking' : 'Submit for AI Review'}</span>
-            </button>
-            <button
-              onClick={() => onNavigate('dashboard')}
-              className="flex-1 py-4 rounded-lg font-semibold transition-colors"
-              style={greyButtonStyle}
-            >
-              Cancel
-            </button>
+                Next
+              </OvalButton>
+            ) : (
+              <div className="flex items-center gap-4 w-full">
+                <OvalButton
+                  onClick={handlePrev}
+                  className="flex-1 py-4 font-semibold text-center"
+                  style={{ ...greyButtonStyle }}
+                >
+                  Previous
+                </OvalButton>
+
+                <OvalButton
+                  onClick={handleNext}
+                  className="flex-1 py-4 font-semibold text-center"
+                  style={{ ...yellowButtonStyle }}
+                  disabled={!canProceed(currentStep)}
+                >
+                  Next
+                </OvalButton>
+              </div>
+            )}
           </div>
+          )}
         </div>
 
         {/* RIGHT SIDEBAR - SUMMARY */}
         <div className="lg:col-span-1">
-          <div className="bg-white border border-slate-200 rounded-lg sticky top-6 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-lg sticky top-6 overflow-hidden">
             {/* Summary Cards */}
             <div className="p-6 space-y-6 max-h-[calc(100vh-100px)] overflow-y-auto">
               
@@ -1715,13 +1835,13 @@ export function ShipmentForm({ shipment, onNavigate }) {
               </div>
 
               <div className="mt-4">
-                <button
+                <OvalButton
                   onClick={downloadSummaryPdf}
-                  className="w-full py-2 rounded-lg transition-colors text-sm font-semibold"
+                  className="w-full py-2 transition-colors text-sm font-semibold"
                   style={{ ...yellowButtonStyle, color: '#2F1B17' }}
                 >
                   Download Summary
-                </button>
+                </OvalButton>
               </div>
             </div>
           </div>
