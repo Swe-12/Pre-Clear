@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using PreClear.Api.Interfaces;
+using PreClear.Api.Models;
 
 namespace PreClear.Api.Controllers
 {
@@ -156,7 +157,7 @@ namespace PreClear.Api.Controllers
                     {
                         ShipmentId = req.ShipmentId,
                         DocumentType = PreClear.Api.Models.DocumentType.Other,
-                        Name = name,
+                        FileName = name,
                         FileUrl = null,
                         UploadedBy = null,
                         VerifiedByBroker = false,
@@ -170,7 +171,7 @@ namespace PreClear.Api.Controllers
                     docsToSave.Add(saved);
                 }
 
-                return Ok(new { saved = docsToSave.Count, documents = docsToSave.Select(d => new { d.Id, d.Name, d.Required, d.Uploaded }) });
+                return Ok(new { saved = docsToSave.Count, documents = docsToSave.Select(d => new { d.Id, d.FileName, d.Required, d.Uploaded }) });
             }
             catch (Exception ex)
             {

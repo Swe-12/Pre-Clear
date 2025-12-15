@@ -17,5 +17,23 @@ namespace PreClear.Api.Models
         public long? CreatedBy { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        
+        // Optional summary fields
+        public string? BrokerNotes { get; set; }
+        public decimal? TotalValue { get; set; }
+        public decimal? TotalWeight { get; set; }
+        public string? Currency { get; set; }
+        public string? TrackingNumber { get; set; }
+        public DateTime? EstimatedDelivery { get; set; }
+        public long? ShipperId { get; set; }
+        public long? ConsigneeId { get; set; }
+        public DateTime? TokenGeneratedAt { get; set; }
+        // Broker assignment
+        public long? AssignedBrokerId { get; set; }
+
+        // Navigation properties
+        public virtual ICollection<ShipmentItem>? Items { get; set; }
+        public virtual ICollection<ShipmentDocument>? Documents { get; set; }
+        public virtual ICollection<ShipmentParty>? Parties { get; set; }
     }
 }

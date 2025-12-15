@@ -6,8 +6,8 @@ namespace PreClear.Api.Interfaces
 {
     public interface IExceptionService
     {
-        Task<ShipmentException> CreateAsync(long shipmentId, string code, string message, long? createdBy = null);
+        Task<ShipmentException> CreateAsync(long shipmentId, string code, string message, string severity = "warning", long? createdBy = null);
         Task<List<ShipmentException>> GetOpenByShipmentAsync(long shipmentId);
-        Task ResolveAsync(long exceptionId, long? resolvedBy = null);
+        Task<ShipmentException> ResolveAsync(long exceptionId, long? resolvedBy = null);
     }
 }

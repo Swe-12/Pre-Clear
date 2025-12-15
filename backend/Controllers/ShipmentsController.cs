@@ -1,8 +1,6 @@
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using PreClear.Api.Interfaces;
 using PreClear.Api.Models;
 
@@ -13,89 +11,126 @@ namespace PreClear.Api.Controllers
     public class ShipmentsController : ControllerBase
     {
         private readonly IShipmentService _service;
-        private readonly ILogger<ShipmentsController> _logger;
 
-        public ShipmentsController(IShipmentService service, ILogger<ShipmentsController> logger)
+        public ShipmentsController(IShipmentService service)
         {
             _service = service;
-            _logger = logger;
         }
 
-        // POST: api/shipments
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateShipmentDto dto)
+        [HttpPost("create")]
+        public async Task<IActionResult> Create([FromBody] CreateShipmentRequest request)
         {
-            if (dto == null) return BadRequest(new { error = "invalid_payload" });
-
-            try
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var shipment = await _service.CreateShipmentAsync(request);
+            return CreatedAtAction(nameof(Details), new { id = shipment.Id }, new ShipmentResponse
             {
-                var created = await _service.CreateAsync(dto);
-                return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
-            }
-            catch (ArgumentException aex)
-            {
-                _logger.LogWarning(aex, "Invalid create shipment request");
-                return BadRequest(new { error = "invalid_input", detail = aex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating shipment");
-                return StatusCode(500, new { error = "internal_error" });
-            }
+                Id = shipment.Id,
+                UserId = shipment.CreatedBy ?? 0,
+                ProductName = shipment.ShipmentName ?? string.Empty,
+                Quantity = shipment.Items?.FirstOrDefault()?.Quantity ?? 0,
+                InvoiceValue = shipment.Items?.FirstOrDefault()?.TotalValue ?? 0,
+                HsCode = shipment.Items?.FirstOrDefault()?.HsCode,
+                Status = shipment.Status ?? "draft",
+                CreatedAt = shipment.CreatedAt,
+                UpdatedAt = shipment.UpdatedAt,
+                TotalValue = shipment.TotalValue,
+                TotalWeight = shipment.TotalWeight,
+                Currency = shipment.Currency,
+                TrackingNumber = shipment.TrackingNumber,
+                EstimatedDelivery = shipment.EstimatedDelivery,
+                ShipperId = shipment.ShipperId,
+                ShipperName = shipment.Parties?.FirstOrDefault(p => p.PartyType == PartyType.shipper)?.CompanyName
+            });
         }
 
-        // PUT: api/shipments/{id}/status
-        [HttpPut("{id:long}/status")]
-        public async Task<IActionResult> UpdateStatus(long id, [FromBody] UpdateStatusRequest req)
+        [HttpGet("{userId:long}")]
+        public async Task<IActionResult> GetByUser([FromRoute] long userId)
         {
-            if (req == null || string.IsNullOrWhiteSpace(req.Status)) return BadRequest(new { error = "status_required" });
-
-            try
+            var list = await _service.GetShipmentsByUserAsync(userId);
+            var result = list.Select(s => new ShipmentResponse
             {
-                var ok = await _service.UpdateStatusAsync(id, req.Status);
-                if (!ok) return NotFound();
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating shipment status");
-                return StatusCode(500, new { error = "internal_error" });
-            }
+                Id = s.Id,
+                UserId = s.CreatedBy ?? 0,
+                ProductName = s.ShipmentName ?? string.Empty,
+                Quantity = s.Items?.FirstOrDefault()?.Quantity ?? 0,
+                InvoiceValue = s.Items?.FirstOrDefault()?.TotalValue ?? 0,
+                HsCode = s.Items?.FirstOrDefault()?.HsCode,
+                Status = s.Status ?? "draft",
+                CreatedAt = s.CreatedAt,
+                UpdatedAt = s.UpdatedAt
+            });
+            return Ok(result);
         }
 
-        // GET: api/shipments/user/{userId}
-        [HttpGet("user/{userId:long}")]
-        public async Task<IActionResult> GetByUser(long userId)
+        [HttpGet("details/{id:long}")]
+        public async Task<IActionResult> Details([FromRoute] long id)
         {
-            try
+            var s = await _service.GetShipmentByIdAsync(id);
+            if (s == null) return NotFound();
+
+            var resp = new ShipmentResponse
             {
-                var list = await _service.GetByUserAsync(userId);
-                return Ok(list);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving shipments for user {UserId}", userId);
-                return StatusCode(500, new { error = "internal_error" });
-            }
+                Id = s.Id,
+                UserId = s.CreatedBy ?? 0,
+                ProductName = s.ShipmentName ?? string.Empty,
+                Quantity = s.Items?.FirstOrDefault()?.Quantity ?? 0,
+                InvoiceValue = s.Items?.FirstOrDefault()?.TotalValue ?? 0,
+                HsCode = s.Items?.FirstOrDefault()?.HsCode,
+                Status = s.Status ?? "draft",
+                CreatedAt = s.CreatedAt,
+                UpdatedAt = s.UpdatedAt
+            };
+
+            return Ok(resp);
         }
 
-        // GET: api/shipments/{id}
-        [HttpGet("{id:long}")]
-        public async Task<IActionResult> GetById(long id)
+        [HttpPut("update/{id:long}")]
+        public async Task<IActionResult> Update([FromRoute] long id, [FromBody] UpdateShipmentRequest request)
         {
-            try
-            {
-                var s = await _service.GetByIdAsync(id);
-                if (s == null) return NotFound();
-                return Ok(s);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting shipment {Id}", id);
-                return StatusCode(500, new { error = "internal_error" });
-            }
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var s = await _service.UpdateShipmentAsync(id, request);
+            if (s == null) return NotFound();
+            return NoContent();
         }
 
-        public class UpdateStatusRequest { public string Status { get; set; } = string.Empty; }
+        [HttpPost("{id:long}/submit")]
+        public async Task<IActionResult> Submit([FromRoute] long id, [FromBody] ChangeStatusRequest req)
+        {
+            var ok = await _service.ChangeStatusAsync(id, "submitted", null, req?.Notes);
+            if (!ok) return BadRequest(new { error = "invalid_transition" });
+            return Ok();
+        }
+
+        [HttpPost("{id:long}/approve")]
+        public async Task<IActionResult> Approve([FromRoute] long id, [FromBody] ChangeStatusRequest req)
+        {
+            var ok = await _service.ChangeStatusAsync(id, "approved", null, req?.Notes);
+            if (!ok) return BadRequest(new { error = "invalid_transition" });
+            return Ok();
+        }
+
+        [HttpPost("{id:long}/reject")]
+        public async Task<IActionResult> Reject([FromRoute] long id, [FromBody] ChangeStatusRequest req)
+        {
+            var ok = await _service.ChangeStatusAsync(id, "rejected", null, req?.Notes);
+            if (!ok) return BadRequest(new { error = "invalid_transition" });
+            return Ok();
+        }
+
+        [HttpPost("{id:long}/hold")]
+        public async Task<IActionResult> Hold([FromRoute] long id, [FromBody] ChangeStatusRequest req)
+        {
+            var ok = await _service.ChangeStatusAsync(id, "on_hold", null, req?.Notes);
+            if (!ok) return BadRequest(new { error = "invalid_transition" });
+            return Ok();
+        }
+
+        [HttpPost("{id:long}/reopen")]
+        public async Task<IActionResult> Reopen([FromRoute] long id, [FromBody] ChangeStatusRequest req)
+        {
+            var ok = await _service.ChangeStatusAsync(id, "reopen", null, req?.Notes);
+            if (!ok) return BadRequest(new { error = "invalid_transition" });
+            return Ok();
+        }
     }
 }

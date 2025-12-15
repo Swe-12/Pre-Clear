@@ -15,7 +15,7 @@ namespace PreClear.Api.Data
         public DbSet<ShipmentPackage> ShipmentPackages { get; set; }
         public DbSet<ShipmentItem> ShipmentItems { get; set; }
         public DbSet<ShipmentService> ShipmentServices { get; set; }
-        public DbSet<Payment> Payments { get; set; }
+        public DbSet<Invoice> Invoices { get; set; }
         public DbSet<ShipmentCompliance> ShipmentCompliance { get; set; }
         public DbSet<AiFinding> AiFindings { get; set; }
         public DbSet<ShipmentDocument> ShipmentDocuments { get; set; }
@@ -25,9 +25,13 @@ namespace PreClear.Api.Data
         public DbSet<ShipmentMessage> ShipmentMessages { get; set; }
         public DbSet<ShipmentTracking> ShipmentTracking { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<Tag> Tags { get; set; }
+        public DbSet<Payment> Payments { get; set; }
         public DbSet<ImportExportRule> ImportExportRules { get; set; }
         public DbSet<ApprovalLog> ApprovalLogs { get; set; }
         public DbSet<RuleChangeRequest> RuleChangeRequests { get; set; }
+        public DbSet<ShipmentException> ShipmentExceptions { get; set; }
+        public DbSet<SyncLog> SyncLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -85,14 +89,24 @@ namespace PreClear.Api.Data
                 entity.Property(s => s.ShipmentType).HasColumnName("shipment_type").HasConversion<string>().HasMaxLength(20).HasDefaultValue(ShipmentType.International);
                 entity.Property(s => s.Carrier).HasColumnName("carrier").HasMaxLength(100).HasDefaultValue("UPS");
                 entity.Property(s => s.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue(ShipmentStatus.draft.ToString());
+                entity.Property(s => s.TotalValue).HasColumnName("total_value").HasColumnType("decimal(18,2)");
+                entity.Property(s => s.TotalWeight).HasColumnName("total_weight").HasColumnType("decimal(12,3)");
+                entity.Property(s => s.Currency).HasColumnName("currency").HasMaxLength(10);
+                entity.Property(s => s.TrackingNumber).HasColumnName("tracking_number").HasMaxLength(200);
+                entity.Property(s => s.EstimatedDelivery).HasColumnName("estimated_delivery").HasColumnType("datetime(3)");
+                entity.Property(s => s.ShipperId).HasColumnName("shipper_id");
+                entity.Property(s => s.ConsigneeId).HasColumnName("consignee_id");
+                entity.Property(s => s.TokenGeneratedAt).HasColumnName("token_generated_at").HasColumnType("datetime(3)");
                 entity.Property(s => s.PreclearToken).HasColumnName("preclear_token").HasMaxLength(150);
                 entity.Property(s => s.CreatedBy).HasColumnName("created_by");
+                entity.Property(s => s.AssignedBrokerId).HasColumnName("assigned_broker_id");
                 entity.HasOne<User>().WithMany().HasForeignKey(s => s.CreatedBy).HasConstraintName("fk_shipments_createdby").OnDelete(DeleteBehavior.SetNull);
                 entity.Property(s => s.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(3)").HasDefaultValueSql("CURRENT_TIMESTAMP(3)");
                 entity.Property(s => s.UpdatedAt).HasColumnName("updated_at").HasColumnType("datetime(3)").ValueGeneratedOnAddOrUpdate();
 
                 entity.HasIndex(s => s.Mode).HasDatabaseName("idx_shipments_mode");
                 entity.HasIndex(s => s.Status).HasDatabaseName("idx_shipments_status");
+                entity.HasIndex(s => s.TrackingNumber).HasDatabaseName("idx_shipments_tracking");
             });
 
             // -------- shipment_parties
@@ -178,24 +192,20 @@ namespace PreClear.Api.Data
                 entity.HasIndex(s => s.ShipmentId).HasDatabaseName("idx_services_shipment");
             });
 
-            // -------- payments
-            modelBuilder.Entity<Payment>(entity =>
+            // -------- invoices
+            modelBuilder.Entity<Invoice>(entity =>
             {
-                entity.ToTable("payments");
-                entity.HasKey(p => p.Id);
-                entity.Property(p => p.Id).HasColumnName("id");
-                entity.Property(p => p.ShipmentId).HasColumnName("shipment_id");
-                entity.Property(p => p.Payer).HasColumnName("payer").HasConversion<string>().HasMaxLength(20).HasDefaultValue(Payer.Shipper);
-                entity.Property(p => p.Amount).HasColumnName("amount").HasColumnType("decimal(18,2)");
-                entity.Property(p => p.Currency).HasColumnName("currency").HasMaxLength(3).HasDefaultValue("USD");
-                entity.Property(p => p.PaymentStatus).HasColumnName("payment_status").HasConversion<string>().HasMaxLength(20).HasDefaultValue(PaymentStatus.pending);
-                entity.Property(p => p.PaymentMethod).HasColumnName("payment_method").HasMaxLength(100);
-                entity.Property(p => p.PaidAt).HasColumnName("paid_at").HasColumnType("datetime(3)");
-                entity.Property(p => p.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(3)").HasDefaultValueSql("CURRENT_TIMESTAMP(3)");
+                entity.ToTable("invoices");
+                entity.HasKey(i => i.Id);
+                entity.Property(i => i.Id).HasColumnName("id");
+                entity.Property(i => i.ShipmentId).HasColumnName("shipment_id");
+                entity.Property(i => i.TotalAmount).HasColumnName("total_amount").HasColumnType("decimal(18,2)");
+                entity.Property(i => i.PdfUrl).HasColumnName("pdf_url").HasMaxLength(500);
+                entity.Property(i => i.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(3)").HasDefaultValueSql("CURRENT_TIMESTAMP(3)");
 
-                entity.HasOne<Shipment>().WithMany().HasForeignKey(p => p.ShipmentId).HasConstraintName("fk_payments_shipment").OnDelete(DeleteBehavior.Cascade);
-                entity.HasIndex(p => p.ShipmentId).HasDatabaseName("idx_payments_shipment");
-                entity.HasIndex(p => p.PaymentStatus).HasDatabaseName("idx_payments_status");
+                entity.HasOne<Shipment>().WithMany().HasForeignKey(i => i.ShipmentId).HasConstraintName("fk_invoices_shipment").OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(i => i.ShipmentId).HasDatabaseName("idx_invoices_shipment");
+                entity.HasIndex(i => i.CreatedAt).HasDatabaseName("idx_invoices_created_at");
             });
 
             // -------- shipment_compliance
@@ -240,6 +250,21 @@ namespace PreClear.Api.Data
                 entity.HasIndex(a => a.ShipmentId).HasDatabaseName("idx_aifindings_shipment");
             });
 
+            // -------- payments
+            modelBuilder.Entity<Payment>(entity =>
+            {
+                entity.ToTable("payments");
+                entity.HasKey(p => p.Id);
+                entity.Property(p => p.Id).HasColumnName("id");
+                entity.Property(p => p.UserId).HasColumnName("user_id");
+                entity.Property(p => p.Amount).HasColumnName("amount").HasColumnType("decimal(18,2)");
+                entity.Property(p => p.Status).HasColumnName("status").HasMaxLength(50).HasDefaultValue("pending");
+                entity.Property(p => p.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(3)").HasDefaultValueSql("CURRENT_TIMESTAMP(3)");
+
+                entity.HasIndex(p => p.UserId).HasDatabaseName("idx_payments_user");
+                entity.HasIndex(p => p.CreatedAt).HasDatabaseName("idx_payments_created_at");
+            });
+
             // -------- shipment_documents
             modelBuilder.Entity<ShipmentDocument>(entity =>
             {
@@ -248,8 +273,9 @@ namespace PreClear.Api.Data
                 entity.Property(d => d.Id).HasColumnName("id");
                 entity.Property(d => d.ShipmentId).HasColumnName("shipment_id");
                 entity.Property(d => d.DocumentType).HasColumnName("document_type").HasConversion<string>().HasMaxLength(50).HasDefaultValue(DocumentType.Other);
-                entity.Property(d => d.Name).HasColumnName("name").HasMaxLength(255);
+                entity.Property(d => d.FileName).HasColumnName("name").HasMaxLength(255);
                 entity.Property(d => d.FileUrl).HasColumnName("file_url").HasMaxLength(2000);
+                entity.Property(d => d.FileType).HasColumnName("file_type").HasMaxLength(50);
                 entity.Property(d => d.UploadedBy).HasColumnName("uploaded_by");
                 entity.Property(d => d.VerifiedByBroker).HasColumnName("verified_by_broker").HasDefaultValue(false);
                 entity.Property(d => d.Required).HasColumnName("required").HasDefaultValue(false);
@@ -320,6 +346,7 @@ namespace PreClear.Api.Data
                 entity.Property(m => m.Id).HasColumnName("id");
                 entity.Property(m => m.ShipmentId).HasColumnName("shipment_id");
                 entity.Property(m => m.SenderId).HasColumnName("sender_id");
+                entity.Property(m => m.Sender).HasColumnName("sender").HasMaxLength(50).HasDefaultValue("user");
                 entity.Property(m => m.Message).HasColumnName("message").HasColumnType("text").IsRequired();
                 entity.Property(m => m.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(3)").HasDefaultValueSql("CURRENT_TIMESTAMP(3)");
 
@@ -353,15 +380,29 @@ namespace PreClear.Api.Data
                 entity.HasKey(a => a.Id);
                 entity.Property(a => a.Id).HasColumnName("id");
                 entity.Property(a => a.UserId).HasColumnName("user_id");
-                entity.Property(a => a.Entity).HasColumnName("entity").HasMaxLength(100).IsRequired();
-                entity.Property(a => a.EntityId).HasColumnName("entity_id");
-                entity.Property(a => a.Action).HasColumnName("action").HasMaxLength(100).IsRequired();
-                entity.Property(a => a.Details).HasColumnName("details").HasColumnType("json")
-                      .HasConversion(v => JsonConverters.SerializeJsonDocument(v), v => JsonConverters.ParseJsonDocument(v));
-                entity.Property(a => a.PerformedAt).HasColumnName("performed_at").HasColumnType("datetime(3)").HasDefaultValueSql("CURRENT_TIMESTAMP(3)");
+                entity.Property(a => a.ShipmentId).HasColumnName("shipment_id");
+                entity.Property(a => a.Action).HasColumnName("action").HasMaxLength(200).IsRequired();
+                entity.Property(a => a.Description).HasColumnName("description").HasColumnType("text");
+                entity.Property(a => a.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(3)").HasDefaultValueSql("CURRENT_TIMESTAMP(3)");
 
                 entity.HasOne<User>().WithMany().HasForeignKey(a => a.UserId).HasConstraintName("fk_audit_user").OnDelete(DeleteBehavior.SetNull);
-                entity.HasIndex(a => new { a.Entity, a.EntityId }).HasDatabaseName("idx_audit_entity");
+                entity.HasIndex(a => a.ShipmentId).HasDatabaseName("idx_audit_shipment");
+                entity.HasIndex(a => a.UserId).HasDatabaseName("idx_audit_user");
+                entity.HasIndex(a => a.CreatedAt).HasDatabaseName("idx_audit_created_at");
+            });
+
+            // -------- tags
+            modelBuilder.Entity<Tag>(entity =>
+            {
+                entity.ToTable("tags");
+                entity.HasKey(t => t.Id);
+                entity.Property(t => t.Id).HasColumnName("id");
+                entity.Property(t => t.ShipmentId).HasColumnName("shipment_id");
+                entity.Property(t => t.Name).HasColumnName("name").HasMaxLength(200).IsRequired();
+                entity.Property(t => t.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(3)").HasDefaultValueSql("CURRENT_TIMESTAMP(3)");
+
+                entity.HasOne<Shipment>().WithMany().HasForeignKey(t => t.ShipmentId).HasConstraintName("fk_tags_shipment").OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(t => t.ShipmentId).HasDatabaseName("idx_tags_shipment");
             });
 
             // -------- import_export_rules
@@ -437,6 +478,42 @@ namespace PreClear.Api.Data
                 entity.HasOne<User>().WithMany().HasForeignKey(r => r.ProposerId).OnDelete(DeleteBehavior.SetNull);
                 entity.HasOne<User>().WithMany().HasForeignKey(r => r.ReviewedBy).OnDelete(DeleteBehavior.SetNull);
                 entity.HasIndex(r => r.Status).HasDatabaseName("idx_rcr_status");
+            });
+
+            // -------- shipment_exceptions
+            modelBuilder.Entity<ShipmentException>(entity =>
+            {
+                entity.ToTable("shipment_exceptions");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.ShipmentId).HasColumnName("shipment_id");
+                entity.Property(e => e.Code).HasColumnName("code").HasMaxLength(100).IsRequired();
+                entity.Property(e => e.Message).HasColumnName("message").HasColumnType("text").IsRequired();
+                entity.Property(e => e.Severity).HasColumnName("severity").HasMaxLength(50).HasDefaultValue("warning");
+                entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasColumnType("datetime(3)").HasDefaultValueSql("CURRENT_TIMESTAMP(3)");
+                entity.Property(e => e.Resolved).HasColumnName("resolved").HasDefaultValue(false);
+                entity.Property(e => e.ResolvedBy).HasColumnName("resolved_by");
+                entity.Property(e => e.ResolvedAt).HasColumnName("resolved_at").HasColumnType("datetime(3)");
+
+                entity.HasOne<Shipment>().WithMany().HasForeignKey(e => e.ShipmentId).HasConstraintName("fk_exceptions_shipment").OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne<User>().WithMany().HasForeignKey(e => e.CreatedBy).OnDelete(DeleteBehavior.SetNull);
+                entity.HasOne<User>().WithMany().HasForeignKey(e => e.ResolvedBy).OnDelete(DeleteBehavior.SetNull);
+                entity.HasIndex(e => e.ShipmentId).HasDatabaseName("idx_exceptions_shipment");
+                entity.HasIndex(e => e.Resolved).HasDatabaseName("idx_exceptions_resolved");
+            });
+
+            // -------- sync_logs
+            modelBuilder.Entity<SyncLog>(entity =>
+            {
+                entity.ToTable("sync_logs");
+                entity.HasKey(s => s.Id);
+                entity.Property(s => s.Id).HasColumnName("id");
+                entity.Property(s => s.RunAt).HasColumnName("run_at").HasColumnType("datetime(3)").HasDefaultValueSql("CURRENT_TIMESTAMP(3)");
+                entity.Property(s => s.ImportedCount).HasColumnName("imported_count");
+                entity.Property(s => s.UpdatedCount).HasColumnName("updated_count");
+                entity.Property(s => s.Details).HasColumnName("details").HasColumnType("text");
+                entity.HasIndex(s => s.RunAt).HasDatabaseName("idx_synclogs_runat");
             });
         }
     }

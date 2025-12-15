@@ -28,6 +28,25 @@ builder.Services.AddScoped<PreClear.Api.Interfaces.IShipmentRepository, PreClear
 builder.Services.AddScoped<PreClear.Api.Interfaces.IShipmentService, PreClear.Api.Services.ShipmentService>();
 builder.Services.AddScoped<PreClear.Api.Interfaces.IDocumentRepository, PreClear.Api.Repositories.DocumentRepository>();
 builder.Services.AddScoped<PreClear.Api.Interfaces.IDocumentService, PreClear.Api.Services.DocumentService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IExceptionService, PreClear.Api.Services.ExceptionService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IExceptionRepository, PreClear.Api.Repositories.ExceptionRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IUserService, PreClear.Api.Services.UserService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IUserRepository, PreClear.Api.Repositories.UserRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IChatMessageService, PreClear.Api.Services.ChatMessageService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IChatMessageRepository, PreClear.Api.Repositories.ChatMessageRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.INotificationService, PreClear.Api.Services.NotificationService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.INotificationRepository, PreClear.Api.Repositories.NotificationRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IInvoiceService, PreClear.Api.Services.InvoiceService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IInvoiceRepository, PreClear.Api.Repositories.InvoiceRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IBrokerAssignmentService, PreClear.Api.Services.BrokerAssignmentService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IAuditLogService, PreClear.Api.Services.AuditLogService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IAuditLogRepository, PreClear.Api.Repositories.AuditLogRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.ITagService, PreClear.Api.Services.TagService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.ITagRepository, PreClear.Api.Repositories.TagRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IDashboardService, PreClear.Api.Services.DashboardService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.ISyncService, PreClear.Api.Services.SyncService>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IPaymentRepository, PreClear.Api.Repositories.PaymentRepository>();
+builder.Services.AddScoped<PreClear.Api.Interfaces.IPaymentService, PreClear.Api.Services.PaymentService>();
 
 // Connection
 var conn = builder.Configuration.GetConnectionString("DefaultConnection");

@@ -1,70 +1,120 @@
-using System.Collections.Generic;
-using System.Linq;
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PreClear.Api.Data;
-using PreClear.Api.Models;
+using Microsoft.Extensions.Logging;
+using PreClear.Api.Interfaces;
 
 namespace PreClear.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/users")]
     public class UsersController : ControllerBase
     {
-        private readonly PreclearDbContext _db;
-        public UsersController(PreclearDbContext db) => _db = db;
+        private readonly IUserService _svc;
+        private readonly ILogger<UsersController> _logger;
 
-        // GET: api/users
+        public UsersController(IUserService svc, ILogger<UsersController> logger)
+        {
+            _svc = svc;
+            _logger = logger;
+        }
+
+        public class ChangeRoleRequest
+        {
+            public string Role { get; set; } = string.Empty;
+        }
+
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<User>>> GetAll()
+        public async Task<IActionResult> List([FromQuery] int? skip, [FromQuery] int? take)
         {
-            return await _db.Users.AsNoTracking().ToListAsync();
+            try
+            {
+                var users = await _svc.ListAsync(skip, take);
+                return Ok(users);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error listing users");
+                return StatusCode(500, new { error = "internal_error" });
+            }
         }
-        // GET: api/users/{id}
-        [HttpGet("{id:long}")]
-        public async Task<ActionResult<User>> Get(long id)
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Get(long id)
         {
-            var user = await _db.Users.FindAsync(id);
-            if (user == null) return NotFound();
-            return user;
+            try
+            {
+                var user = await _svc.GetAsync(id);
+                return Ok(user);
+            }
+            catch (InvalidOperationException iex)
+            {
+                _logger.LogWarning(iex, "User not found");
+                return NotFound(new { error = "user_not_found" });
+            }
+            catch (ArgumentException aex)
+            {
+                _logger.LogWarning(aex, "Invalid argument");
+                return BadRequest(new { error = "invalid_argument", detail = aex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching user");
+                return StatusCode(500, new { error = "internal_error" });
+            }
         }
-        // POST: api/users
-        [HttpPost]
-        public async Task<ActionResult<User>> Create(User input)
+
+        [HttpPut("{id}/role")]
+        public async Task<IActionResult> ChangeRole(long id, [FromBody] ChangeRoleRequest req)
         {
-            // NOTE: in prod hash password and validate input
-            input.CreatedAt = input.UpdatedAt = System.DateTime.UtcNow;
-            _db.Users.Add(input);
-            await _db.SaveChangesAsync();
-            return CreatedAtAction(nameof(Get), new { id = input.Id }, input);
+            if (req == null || string.IsNullOrWhiteSpace(req.Role))
+                return BadRequest(new { error = "role_required" });
+
+            try
+            {
+                var user = await _svc.ChangeRoleAsync(id, req.Role);
+                return Ok(user);
+            }
+            catch (InvalidOperationException iex)
+            {
+                _logger.LogWarning(iex, "User not found");
+                return NotFound(new { error = "user_not_found" });
+            }
+            catch (ArgumentException aex)
+            {
+                _logger.LogWarning(aex, "Invalid argument");
+                return BadRequest(new { error = "invalid_argument", detail = aex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error changing role");
+                return StatusCode(500, new { error = "internal_error" });
+            }
         }
-        // PUT: api/users/{id}
-        [HttpPut("{id:long}")]
-        public async Task<IActionResult> Update(long id, User input)
-        {
-            var user = await _db.Users.FindAsync(id);
-            if (user == null) return NotFound();
-            // selective updates (avoid overwriting password_hash unless provided)
-            user.FirstName = input.FirstName;
-            user.LastName = input.LastName;
-            user.Phone = input.Phone;
-            user.Company = input.Company;
-            user.Role = input.Role;
-            user.IsActive = input.IsActive;
-            user.UpdatedAt = System.DateTime.UtcNow;
-            await _db.SaveChangesAsync();
-            return NoContent();
-        }
-        // DELETE: api/users/{id}
-        [HttpDelete("{id:long}")]
+
+        [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(long id)
         {
-            var user = await _db.Users.FindAsync(id);
-            if (user == null) return NotFound();
-            _db.Users.Remove(user);
-            await _db.SaveChangesAsync();
-            return NoContent();
+            try
+            {
+                await _svc.DeleteAsync(id);
+                return Ok(new { message = "user_deleted" });
+            }
+            catch (InvalidOperationException iex)
+            {
+                _logger.LogWarning(iex, "User not found");
+                return NotFound(new { error = "user_not_found" });
+            }
+            catch (ArgumentException aex)
+            {
+                _logger.LogWarning(aex, "Invalid argument");
+                return BadRequest(new { error = "invalid_argument", detail = aex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting user");
+                return StatusCode(500, new { error = "internal_error" });
+            }
         }
     }
 }

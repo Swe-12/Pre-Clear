@@ -1,9 +1,12 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
 using PreClear.Api.Data;
 using PreClear.Api.Interfaces;
 using PreClear.Api.Models;

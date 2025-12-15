@@ -11,6 +11,7 @@ import { ShipperDashboard } from "./components/shipper/ShipperDashboard";
 import { ShipmentDetails } from "./components/shipper/ShipmentDetails";
 import { UploadDocuments } from "./components/shipper/UploadDocuments";
 import { AIEvaluationStatus } from "./components/shipper/AIEvaluationStatus";
+import AiUploader from "./components/AiUploader";
 import { RequestBrokerApproval } from "./components/shipper/RequestBrokerApproval";
 import { ChatNotifications } from "./components/shipper/ChatNotifications";
 import { ShipmentToken } from "./components/shipper/ShipmentToken";
@@ -100,6 +101,8 @@ function AppContent() {
             onNavigate={handleNavigate}
           />
         );
+      case "ai-uploader":
+        return <AiUploader />;
       case "request-broker":
         return (
           <RequestBrokerApproval

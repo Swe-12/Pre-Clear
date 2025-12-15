@@ -51,6 +51,20 @@ export function AdminDashboard({ onNavigate }) {
         <p className="text-slate-600">System overview and management</p>
       </div>
 
+      {/* Global summary */}
+      <div className="mb-6">
+        {/* lazy-load widget to avoid API coupling in static mock area */}
+        <DashboardSummaryWidget />
+      </div>
+
+      <div className="mb-6">
+        <SyncRunner />
+      </div>
+
+      <div className="mb-6">
+        <PaymentRunner />
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">

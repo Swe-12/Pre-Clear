@@ -1,5 +1,6 @@
 import { PackagePlus, Package, Clock, CheckCircle, XCircle, AlertTriangle, TrendingUp, Upload, DollarSign, Eye, Edit, Filter, MessageSquare } from 'lucide-react';
 import { NotificationPanel } from '../NotificationPanel';
+import DashboardSummaryWidget from '../DashboardSummaryWidget';
 import { shipmentsStore, createDefaultShipment } from '../../store/shipmentsStore';
 import { useState } from 'react';
 import { useShipments } from '../../hooks/useShipments';

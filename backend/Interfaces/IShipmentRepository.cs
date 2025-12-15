@@ -9,6 +9,7 @@ namespace PreClear.Api.Interfaces
         Task<Shipment> AddAsync(Shipment shipment);
         Task<Shipment?> GetByIdAsync(long id);
         Task<List<Shipment>> GetByUserAsync(long userId);
+        Task<List<Shipment>> GetByBrokerAsync(long brokerId);
         Task UpdateAsync(Shipment shipment);
     }
 }
