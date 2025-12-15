@@ -10,18 +10,25 @@ using Microsoft.AspNetCore.Http;
 using PreClear.Api.Data;
 using PreClear.Api.Interfaces;
 using PreClear.Api.Models;
+using System.Text.Json.Serialization;
 
 namespace PreClear.Api.Services
 {
+    using System.Net.Http;
+    using System.Net.Http.Json;
+    using System.Collections.Generic;
+
     public class AiService : IAiService
     {
         private readonly IAiRepository _repo;
         private readonly ILogger<AiService> _logger;
+        private readonly IHttpClientFactory _httpFactory;
 
-        public AiService(IAiRepository repo, ILogger<AiService> logger)
+        public AiService(IAiRepository repo, ILogger<AiService> logger, IHttpClientFactory httpFactory)
         {
             _repo = repo;
             _logger = logger;
+            _httpFactory = httpFactory;
         }
 
         public async Task<AiResultDto> AnalyzeAsync(string description)
@@ -54,6 +61,102 @@ namespace PreClear.Api.Services
             }
 
             return result;
+        }
+        public class DocumentRequirement
+        {
+            public string Name { get; set; }
+            public double Confidence { get; set; }
+            public string Provenance { get; set; }
+            public string Description { get; set; }
+            public string RegulatoryBasis { get; set; }
+        }
+
+        public class DocumentSuggestRequest
+        {
+            public string ProductName { get; set; }
+            public string Category { get; set; }
+            public string ProductDescription { get; set; }
+            public string HsCode { get; set; }
+            public string OriginCountry { get; set; }
+            public string DestinationCountry { get; set; }
+            public string PackageType { get; set; }
+            public double Weight { get; set; }
+            public double DeclaredValue { get; set; }
+            public string ShipmentType { get; set; }
+            public string ServiceLevel { get; set; }
+        }
+
+        public class DocumentSuggestResponse
+        {
+            public string ShipmentId { get; set; }
+            public List<DocumentRequirement> PredictedDocuments { get; set; }
+            public string Mode { get; set; }
+            public string ModelVersion { get; set; }
+            public string Timestamp { get; set; }
+            public double ConfidenceThreshold { get; set; }
+        }
+
+        public async Task<DocumentSuggestResponse> SuggestDocumentsAsync(DocumentSuggestRequest request)
+        {
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            var client = _httpFactory?.CreateClient() ?? new HttpClient();
+            var payload = new
+            {
+                product_name = request.ProductName ?? string.Empty,
+                category = request.Category ?? string.Empty,
+                product_description = request.ProductDescription ?? string.Empty,
+                hs_code = request.HsCode ?? string.Empty,
+                origin_country = request.OriginCountry ?? string.Empty,
+                destination_country = request.DestinationCountry ?? string.Empty,
+                package_type = request.PackageType ?? string.Empty,
+                weight = request.Weight,
+                declared_value = request.DeclaredValue,
+                shipment_type = request.ShipmentType ?? string.Empty,
+                service_level = request.ServiceLevel ?? string.Empty,
+            };
+
+            try
+            {
+                var resp = await client.PostAsJsonAsync("http://localhost:8002/predict-documents", payload);
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Document recommendation service returned {Status}", resp.StatusCode);
+                    return new DocumentSuggestResponse
+                    {
+                        PredictedDocuments = new List<DocumentRequirement>(),
+                        Mode = "error",
+                        ModelVersion = "unknown",
+                        Timestamp = DateTime.UtcNow.ToString("O"),
+                        ConfidenceThreshold = 0.5
+                    };
+                }
+
+                var result = await resp.Content.ReadFromJsonAsync<DocumentSuggestResponse>();
+                return result ?? new DocumentSuggestResponse
+                {
+                    PredictedDocuments = new List<DocumentRequirement>(),
+                    Mode = "ml",
+                    ModelVersion = "unknown",
+                    Timestamp = DateTime.UtcNow.ToString("O"),
+                    ConfidenceThreshold = 0.5
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to call document recommendation service");
+                return new DocumentSuggestResponse
+                {
+                    PredictedDocuments = new List<DocumentRequirement>(),
+                    Mode = "error",
+                    ModelVersion = "unknown",
+                    Timestamp = DateTime.UtcNow.ToString("O"),
+                    ConfidenceThreshold = 0.5
+                };
+            }
         }
 
         private AiResultDto RunHeuristics(string text)
@@ -127,131 +230,125 @@ namespace PreClear.Api.Services
             };
         }
 
-        public async Task<AiExtractionResult> ExtractTextAsync(IFormFile file)
+        public class HsSuggestion
         {
-            if (file == null)
-            {
-                return new AiExtractionResult { ExtractedText = string.Empty, SourceFileName = string.Empty, Notes = "no_file" };
-            }
-
-            // Read the filename and use a simple deterministic mock extraction
-            var fileName = file.FileName ?? "unknown";
-            string text;
-
-            // If filename contains keywords, return a representative sample
-            var lower = fileName.ToLowerInvariant();
-            if (lower.Contains("invoice"))
-            {
-                text = "Invoice Number: INV-12345\nDate: 2025-12-01\nExporter: ACME Exporters\nTotal Value: USD 12,345.67\nItems: 10 x Widgets";
-            }
-            else if (lower.Contains("packing") || lower.Contains("packinglist") || lower.Contains("packing-list"))
-            {
-                text = "Packing List\nPackage Count: 4\nGross Weight: 120 kg\nShipper: ACME Exporters\nConsignee: Global Importers";
-            }
-            else
-            {
-                // fallback: generate a short mock text based on file bytes checksum
-                using var ms = new MemoryStream();
-                await file.CopyToAsync(ms);
-                var hash = ms.Length > 0 ? (ms.Length % 10000).ToString() : "0";
-                text = $"DetectedText: sample_extraction_{hash}\nSourceFile: {fileName}";
-            }
-
-            return new AiExtractionResult
-            {
-                ExtractedText = text,
-                SourceFileName = fileName,
-                Notes = "mock_extraction"
-            };
+            public string HsCode { get; set; }
+            public string Description { get; set; }
+            public double Score { get; set; }
         }
 
-        public async Task<AiValidationResult> ValidateInvoiceAsync(IFormFile file)
+        public class HsResponse
         {
-            var extraction = await ExtractTextAsync(file);
-            var text = extraction.ExtractedText ?? string.Empty;
-            var missing = new List<string>();
-            var extracted = new Dictionary<string, string>();
-
-            // Invoice number
-            var invMatch = Regex.Match(text, "Invoice Number:\\s*(\\S+)", RegexOptions.IgnoreCase);
-            if (invMatch.Success)
-            {
-                extracted["invoice_number"] = invMatch.Groups[1].Value;
-            }
-            else missing.Add("invoice_number");
-
-            // Date
-            var dateMatch = Regex.Match(text, "Date:\\s*([0-9]{4}-[0-9]{2}-[0-9]{2})", RegexOptions.IgnoreCase);
-            if (dateMatch.Success)
-            {
-                extracted["date"] = dateMatch.Groups[1].Value;
-            }
-            else missing.Add("date");
-
-            // Exporter
-            var exporterMatch = Regex.Match(text, "Exporter:\\s*(.+)", RegexOptions.IgnoreCase);
-            if (exporterMatch.Success)
-            {
-                extracted["exporter"] = exporterMatch.Groups[1].Value.Trim();
-            }
-            else missing.Add("exporter");
-
-            // Total value
-            var valueMatch = Regex.Match(text, "Total Value:\\s*([A-Z]{3}\\s*[0-9,.]+)", RegexOptions.IgnoreCase);
-            if (valueMatch.Success)
-            {
-                extracted["total_value"] = valueMatch.Groups[1].Value;
-            }
-            else missing.Add("total_value");
-
-            return new AiValidationResult
-            {
-                IsValid = missing.Count == 0,
-                MissingFields = missing.ToArray(),
-                ExtractedFields = extracted,
-                Notes = "mock_invoice_validation"
-            };
+            public List<HsSuggestion> Suggestions { get; set; }
         }
 
-        public async Task<AiValidationResult> ValidatePackingListAsync(IFormFile file)
+        public async System.Threading.Tasks.Task<System.Collections.Generic.List<HsSuggestion>> SuggestHsAsync(string name, string category, string description, int k = 5)
         {
-            var extraction = await ExtractTextAsync(file);
-            var text = extraction.ExtractedText ?? string.Empty;
-            var missing = new List<string>();
-            var extracted = new Dictionary<string, string>();
-
-            // Check package count
-            var pkgMatch = Regex.Match(text, "Package Count:\\s*(\\d+)", RegexOptions.IgnoreCase);
-            if (pkgMatch.Success)
+            var client = _httpFactory?.CreateClient() ?? new HttpClient();
+            var payload = new { name = name ?? string.Empty, category = category ?? string.Empty, description = description ?? string.Empty, k };
+            try
             {
-                extracted["package_count"] = pkgMatch.Groups[1].Value;
+                var resp = await client.PostAsJsonAsync("http://localhost:8001/suggest-hs", payload);
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("HS suggest service returned {Status}", resp.StatusCode);
+                    return new List<HsSuggestion>();
+                }
+
+                var body = await resp.Content.ReadFromJsonAsync<HsResponse>();
+                if (body?.Suggestions == null) return new List<HsSuggestion>();
+
+                // Map fields (service returns hscode, description, score)
+                var mapped = new List<HsSuggestion>();
+                foreach (var s in body.Suggestions)
+                {
+                    mapped.Add(new HsSuggestion { HsCode = s.HsCode ?? s.HsCode, Description = s.Description, Score = s.Score });
+                }
+                return mapped;
             }
-            else missing.Add("package_count");
-
-            // Gross weight
-            var wMatch = Regex.Match(text, "Gross Weight:\\s*([0-9,.]+\\s*kg)", RegexOptions.IgnoreCase);
-            if (wMatch.Success)
+            catch (Exception ex)
             {
-                extracted["gross_weight"] = wMatch.Groups[1].Value;
+                _logger.LogWarning(ex, "Failed to call HS suggestion service");
+                return new List<HsSuggestion>();
             }
-            else missing.Add("gross_weight");
-
-            // Shipper
-            var shipperMatch = Regex.Match(text, "Shipper:\\s*(.+)", RegexOptions.IgnoreCase);
-            if (shipperMatch.Success)
-            {
-                extracted["shipper"] = shipperMatch.Groups[1].Value.Trim();
-            }
-            else missing.Add("shipper");
-
-            return new AiValidationResult
-            {
-                IsValid = missing.Count == 0,
-                MissingFields = missing.ToArray(),
-                ExtractedFields = extracted,
-                Notes = "mock_packinglist_validation"
-            };
         }
+
+        public async Task<DocumentPredictionResponse> PredictRequiredDocumentsAsync(DocumentPredictionRequest request)
+        {
+            if (request == null)
+            {
+                return new DocumentPredictionResponse { RequiredDocuments = Array.Empty<string>() };
+            }
+
+            try
+            {
+                var client = _httpFactory.CreateClient();
+                var url = "http://localhost:8002/predict-documents";
+                
+                var response = await client.PostAsJsonAsync(url, request);
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Document prediction service returned {Status}", response.StatusCode);
+                    return new DocumentPredictionResponse { RequiredDocuments = Array.Empty<string>() };
+                }
+
+                var body = await response.Content.ReadFromJsonAsync<DocumentPredictionResponse>();
+                if (body?.RequiredDocuments == null)
+                {
+                    return new DocumentPredictionResponse { RequiredDocuments = Array.Empty<string>() };
+                }
+
+                return body;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to call document prediction service");
+                return new DocumentPredictionResponse { RequiredDocuments = Array.Empty<string>() };
+            }
+        }
+    }
+}
+
+namespace PreClear.Api.Services
+{
+    public class DocumentPredictionRequest
+    {
+        [JsonPropertyName("origin_country")]
+        public string OriginCountry { get; set; }
+        
+        [JsonPropertyName("destination_country")]
+        public string DestinationCountry { get; set; }
+        
+        [JsonPropertyName("hs_code")]
+        public string HsCode { get; set; }
+        
+        [JsonPropertyName("hts_flag")]
+        public bool HtsFlag { get; set; }
+        
+        [JsonPropertyName("product_category")]
+        public string ProductCategory { get; set; }
+        
+        [JsonPropertyName("product_description")]
+        public string ProductDescription { get; set; }
+        
+        [JsonPropertyName("package_type_weight")]
+        public string PackageTypeWeight { get; set; }
+        
+        [JsonPropertyName("mode_of_transport")]
+        public string ModeOfTransport { get; set; }
+        
+        [JsonPropertyName("confidence_threshold")]
+        public float ConfidenceThreshold { get; set; } = 0.3f;
+    }
+
+    public class DocumentPredictionResponse
+    {
+        [JsonPropertyName("required_documents")]
+        public string[] RequiredDocuments { get; set; }
+        
+        [JsonPropertyName("confidence_scores")]
+        public Dictionary<string, float> ConfidenceScores { get; set; }
     }
 }
 
